@@ -1,0 +1,14 @@
+# Apêndice pro /etc/caddy/Caddyfile (host definitivo dos sites de cliente).
+# Aplicar:  cat deploy/caddy-sites.snippet >> /etc/caddy/Caddyfile
+#           caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+# DNS:      A record  sites.noemi.digital -> 2.24.120.204  (cert emite sozinho)
+
+# === Motor montador de site (/root/motor-site): sites estáticos de clientes.
+#     Publicar = `python3 montar_site.py ...` (escreve em /var/www/sites/<slug>/).
+#     Domínio próprio do cliente = copiar este bloco com o domínio dele e
+#     `root * /var/www/sites/<slug>`.
+sites.noemi.digital {
+  root * /var/www/sites
+  file_server
+  header /*/index.html Cache-Control "no-cache, must-revalidate"
+}

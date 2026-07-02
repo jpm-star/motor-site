@@ -9,9 +9,10 @@ from .providers.base import DeployProvider, GeradorSiteProvider, OrquestradorPro
 from .providers.llm_orquestrador import LLMOrquestrador
 from .providers.local_deploy import LocalDeploy
 from .providers.stub import StubDeploy, StubGeradorSite, StubOrquestrador
+from .providers.template_real import GeradorTemplate
 
 _ORQUESTRADORES = {"stub": StubOrquestrador, "llm": LLMOrquestrador}
-_GERADORES = {"stub": StubGeradorSite}
+_GERADORES = {"stub": StubGeradorSite, "template": GeradorTemplate}
 _DEPLOYS = {"stub": StubDeploy, "local": LocalDeploy}
 
 

@@ -13,8 +13,11 @@ from .base import DeployProvider, DeployResultado, SiteGerado
 class LocalDeploy(DeployProvider):
     name = "local"
 
-    def __init__(self, out_dir: str | None = None):
+    def __init__(self, out_dir: str | None = None, base_url: str | None = None):
         self.out_dir = Path(out_dir or os.environ.get("SITE_OUT_DIR", "./out"))
+        # SITE_BASE_URL setada (ex.: https://sites.noemi.digital) => a URL devolvida
+        # é a PÚBLICA servida pelo Caddy file_server em cima do mesmo out_dir.
+        self.base_url = (base_url or os.environ.get("SITE_BASE_URL", "")).rstrip("/")
 
     def publicar(self, site: SiteGerado) -> DeployResultado:
         destino = self.out_dir / site.slug
@@ -23,8 +26,9 @@ class LocalDeploy(DeployProvider):
             alvo = destino / caminho
             alvo.parent.mkdir(parents=True, exist_ok=True)
             alvo.write_text(conteudo, encoding="utf-8")
+        url = f"{self.base_url}/{site.slug}/" if self.base_url else f"file://{destino.resolve()}/index.html"
         return DeployResultado(
-            url=f"file://{destino.resolve()}/index.html",
+            url=url,
             provider=self.name,
             deploy_id=site.slug,
             meta={"out_dir": str(destino)},

@@ -30,18 +30,25 @@ class StubOrquestrador(OrquestradorProvider):
     def sintetizar(self, briefing: dict[str, Any], angulos: list[AnguloAnalise]) -> BriefingSite:
         nome = briefing.get("nome_empresa", "Sua Empresa")
         nicho = briefing.get("nicho", "negócio")
+        # diferenciais do briefing viram os primeiros cards (conteúdo REAL do
+        # cliente > insight genérico); os ângulos completam.
+        secoes = [
+            {"titulo": d, "corpo": f"{nome} entrega isso todos os dias no atendimento a {nicho}."}
+            for d in briefing.get("diferenciais", [])
+        ] + [
+            {"titulo": a.angulo.replace("_", " ").title(), "corpo": a.insight}
+            for a in angulos
+        ]
         return BriefingSite(
             nome_empresa=nome,
             nicho=nicho,
             headline=f"{nome} — referência em {nicho}",
             subheadline="Atendimento rápido, resultado que fala por si.",
-            secoes=[
-                {"titulo": a.angulo.replace("_", " ").title(), "corpo": a.insight}
-                for a in angulos
-            ],
+            secoes=secoes,
             cta_texto="Fale com a gente",
             cta_contato=briefing.get("whatsapp", "(a combinar)"),
             angulos_usados=angulos,
+            cor_primaria=briefing.get("cor_primaria"),
         )
 
 

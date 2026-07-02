@@ -30,6 +30,7 @@ class BriefingSite:
     cta_texto: str
     cta_contato: str
     angulos_usados: list[AnguloAnalise] = field(default_factory=list)
+    cor_primaria: str | None = None  # cor de marca (hex) — o gerador usa se vier
 
 
 @dataclass

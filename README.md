@@ -48,8 +48,31 @@ python:3.12-slim bash -c "pip install -q -r requirements.txt && python -m pytest
 Trocar de provider é **uma linha** de `.env` por estágio: `SITE_ORQUESTRADOR=llm`,
 `SITE_GERADOR=...`, `SITE_DEPLOY=local`. Default de todos = `stub`.
 
+## Publicar um site (F/C2-C3) — 1 comando
+
+```
+python3 montar_site.py --nome "Escritório Contábil Silva" --nicho "contabilidade" \
+    --whatsapp 5566999998888 --diferencial "20 anos de mercado" \
+    --diferencial "Atendimento em 1h" --cor "#1d4ed8"
+# => site publicado: https://sites.noemi.digital/escritorio-contabil-silva/
+```
+
+O CLI usa os providers de produção por default: `SITE_GERADOR=template`
+(`app/providers/template_real.py` — one-page real: hero, cards de diferenciais,
+CTA WhatsApp fixo, SEO/OG, responsivo, cor de marca, conteúdo escapado) +
+`SITE_DEPLOY=local` escrevendo em `/var/www/sites/<slug>/`, servido pelo Caddy da
+VPS em `https://sites.noemi.digital/<slug>/`.
+
+### Host/domínio (pendências de 1 vez)
+
+1. **Caddy**: `cat deploy/caddy-sites.snippet >> /etc/caddy/Caddyfile && caddy
+   validate --config /etc/caddy/Caddyfile && systemctl reload caddy`.
+2. **DNS**: A record `sites.noemi.digital -> 2.24.120.204` (cert TLS emite sozinho).
+3. **Domínio próprio do cliente**: 1 bloco a mais no Caddyfile com `root *
+   /var/www/sites/<slug>` (modelo comentado no snippet) + A record do cliente.
+
 ## Status
 
-Pipeline testável hoje ponta a ponta com stub (`SITE_DEPLOY=local` já publica de
-verdade em disco). Falta: template real reaproveitando `web/` (C3) e o contrato de
-prompt do `LLMOrquestrador` quando as chaves entrarem.
+F (C2/C3) entregue: template real + deploy público + CLI de 1 comando. Falta só o
+apply do snippet Caddy + DNS (acima) e, opcional depois, o contrato de prompt do
+`LLMOrquestrador` quando as chaves entrarem.
