@@ -30,15 +30,20 @@ class StubOrquestrador(OrquestradorProvider):
     def sintetizar(self, briefing: dict[str, Any], angulos: list[AnguloAnalise]) -> BriefingSite:
         nome = briefing.get("nome_empresa", "Sua Empresa")
         nicho = briefing.get("nicho", "negócio")
-        # diferenciais do briefing viram os primeiros cards (conteúdo REAL do
-        # cliente > insight genérico); os ângulos completam.
+        # Seções vêm SÓ de conteúdo REAL do briefing — nunca do insight dos ângulos
+        # (que é meta-análise, não copy). Os ângulos guiam a estrutura, não viram
+        # texto na tela. (Antes: os ângulos-placeholder vazavam pro site em produção.)
         secoes = [
-            {"titulo": d, "corpo": f"{nome} entrega isso todos os dias no atendimento a {nicho}."}
-            for d in briefing.get("diferenciais", [])
-        ] + [
-            {"titulo": a.angulo.replace("_", " ").title(), "corpo": a.insight}
-            for a in angulos
+            {"titulo": d.strip(), "corpo": f"{nome} entrega isso no dia a dia."}
+            for d in briefing.get("diferenciais", []) if d.strip()
         ]
+        if briefing.get("publico", "").strip():
+            secoes.append({"titulo": "Para quem atendemos", "corpo": briefing["publico"].strip()})
+        if briefing.get("prova_social", "").strip():
+            secoes.append({"titulo": "Prova social", "corpo": briefing["prova_social"].strip()})
+        if not secoes:  # nada real veio → uma seção honesta, não placeholder
+            secoes = [{"titulo": f"Sobre a {nome}",
+                       "corpo": f"{nome} atua em {nicho} com atendimento próximo e entrega no prazo."}]
         return BriefingSite(
             nome_empresa=nome,
             nicho=nicho,

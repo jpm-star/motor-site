@@ -11,12 +11,18 @@ def test_analisar_produz_multiplos_angulos_deterministicos():
     assert [x.angulo for x in a1] == [x.angulo for x in a2]  # determinístico
 
 
-def test_sintetizar_usa_nome_e_angulos():
+def test_sintetizar_secoes_de_conteudo_real_nao_de_angulos():
     o = StubOrquestrador()
     angulos = o.analisar(_BRIEFING)
     brief = o.sintetizar(_BRIEFING, angulos)
     assert "Clínica Sorriso" in brief.headline
-    assert len(brief.secoes) == len(angulos)
+    # ângulos são meta-análise, NÃO viram seção (antes vazavam placeholder pro site)
+    insights = {a.insight for a in angulos}
+    assert all(s["corpo"] not in insights for s in brief.secoes)
+    assert not any("determinística" in s["corpo"] for s in brief.secoes)
+    # diferencial real vira seção (primeiro card)
+    b2 = o.sintetizar({**_BRIEFING, "diferenciais": ["Atende no mesmo dia"]}, angulos)
+    assert b2.secoes[0]["titulo"] == "Atende no mesmo dia"
 
 
 def test_gerador_produz_html_valido():

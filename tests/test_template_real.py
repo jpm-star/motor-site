@@ -26,7 +26,9 @@ def test_template_gera_onepage_completa():
     assert "20 anos de mercado" in html
     assert 'https://wa.me/5566999998888"' in html  # contato vira link limpo (só dígitos)
     assert 'name="viewport"' in html and 'property="og:title"' in html
-    assert "--cor: #0f766e" in html  # cor default quando briefing não traz
+    assert "--acento: #b45309" in html  # tema 'grafite' (direção contabilidade)
+    assert "determinística" not in html and "[diferenciacao]" not in html  # sem placeholder
+    assert 'rel="icon"' in html and "fonts.googleapis.com" in html  # favicon + fontes reais
 
 
 def test_template_escapa_conteudo_do_briefing():
@@ -39,7 +41,7 @@ def test_template_escapa_conteudo_do_briefing():
 def test_template_usa_cor_do_brief():
     b = BriefingSite(**{**BRIEF.__dict__, "cor_primaria": "#1d4ed8"})
     html = GeradorTemplate().gerar(b, "s").arquivos["index.html"]
-    assert "--cor: #1d4ed8" in html
+    assert "--acento: #1d4ed8" in html  # cor de marca do cliente vence o acento do tema
 
 
 def test_local_deploy_devolve_url_publica_com_base_url(tmp_path):
@@ -69,7 +71,7 @@ def test_montar_site_producao_ponta_a_ponta(tmp_path, monkeypatch):
     })
     assert r.deploy.url == "https://sites.noemi.digital/clinica-vida/"
     html = (tmp_path / "clinica-vida" / "index.html").read_text()
-    assert "Avaliação gratuita" in html and "--cor: #be185d" in html
+    assert "Avaliação gratuita" in html and "--acento: #be185d" in html
     assert "wa.me/5566988887777" in html
 
 
