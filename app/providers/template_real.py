@@ -64,6 +64,36 @@ def _bloco_faq(t_id: str) -> str:
 </section>"""
 
 
+# Depoimentos de EXEMPLO — sempre marcados como exemplo (trava de honestidade:
+# nunca passar texto fabricado como se fosse cliente real). Mostra o FORMATO; o
+# cliente troca pelos reais depois. Rotação por JS (sem lib).
+_DEPO_EXEMPLO = [
+    ("Atendimento rápido e sem enrolação. Recomendo!", "Cliente satisfeito"),
+    ("Explicaram tudo com clareza e cumpriram o prazo.", "Cliente da região"),
+    ("Profissionais atenciosos do começo ao fim.", "Cliente recente"),
+]
+
+
+def _bloco_depoimentos() -> str:
+    cards = "\n".join(
+        f'<figure class="depo-card"{" hidden" if i else ""}>'
+        f'<span class="depo-tag">exemplo</span>'
+        f'<blockquote>"{html.escape(txt)}"</blockquote>'
+        f'<figcaption>— {html.escape(quem)}</figcaption></figure>'
+        for i, (txt, quem) in enumerate(_DEPO_EXEMPLO))
+    return f"""
+<section class="depo reveal" id="depoimentos">
+  <h2>O que dizem</h2>
+  <div class="depo-palco">{cards}</div>
+</section>
+<script>
+(function(){{
+  var cs=document.querySelectorAll(".depo-card"); if(cs.length<2) return; var k=0;
+  setInterval(function(){{ cs[k].hidden=true; k=(k+1)%cs.length; cs[k].hidden=false; }}, 4500);
+}})();
+</script>"""
+
+
 def _bloco_form(zap: str, nome_empresa: str) -> str:
     """Formulário progressivo: pede só nome+telefone primeiro (menos atrito); o
     resto aparece depois. No envio, abre o WhatsApp já com os dados preenchidos —
@@ -153,6 +183,7 @@ class GeradorTemplate(GeradorSiteProvider):
         calculadora = _bloco_calculadora(acento) if getattr(t, "id", "") == "imobiliaria" else ""
         faq = _bloco_faq(getattr(t, "id", ""))  # universal (cai no genérico se o segmento não tiver)
         formulario = _bloco_form(zap, brief.nome_empresa)  # captura de lead → WhatsApp
+        depoimentos = _bloco_depoimentos()  # exemplos rotativos, sempre marcados "exemplo"
         numerado = t.assinatura == "index"
         cards = "\n".join(
             f'<article class="card reveal">'
@@ -247,6 +278,14 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .lead-form textarea {{ width:100%; margin-top:.7rem; resize:vertical; }}
 .lead-form input:focus, .lead-form textarea:focus {{ outline:0; border-color:var(--acento); }}
 .lead-form button {{ margin-top:1rem; width:100%; }}
+.depo {{ max-width:44rem; margin:3rem auto 0; padding:0 1.5rem; text-align:center; }}
+.depo h2 {{ font-size:clamp(1.4rem,3.5vw,2rem); margin-bottom:1.4rem; letter-spacing:{t.tracking}; }}
+.depo-palco {{ position:relative; }}
+.depo-card {{ background:var(--acento-suave); border-radius:var(--radius); padding:2rem 1.6rem; position:relative; }}
+.depo-tag {{ position:absolute; top:.7rem; right:.7rem; font-size:.62rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--acento); background:var(--bg); border:1px solid var(--linha); border-radius:99px; padding:.15rem .55rem; }}
+.depo-card blockquote {{ font-size:clamp(1.05rem,2.6vw,1.3rem); font-family:"{t.fonte_titulo}",sans-serif; color:var(--ink); line-height:1.4; }}
+.depo-card figcaption {{ margin-top:.9rem; font-size:.85rem; color: color-mix(in srgb,var(--ink) 60%,var(--bg)); }}
 {design.css_motion()}
 </style>
 </head>
@@ -263,6 +302,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   </div>
 </main>
 {calculadora}
+{depoimentos}
 {faq}
 {formulario}
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
