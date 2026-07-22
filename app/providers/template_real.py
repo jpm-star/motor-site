@@ -29,6 +29,41 @@ def _titulo_pagina(nome: str, nicho: str) -> str:
     return f"{nome} — {nicho}" if nicho else nome
 
 
+# FAQ por segmento (build-time): perguntas reais que o cliente faz antes de chamar.
+# Conteúdo genérico mas VERDADEIRO (nada de promessa falsa). <details> nativo, sem JS.
+_FAQ = {
+    "imobiliaria": [
+        ("Vocês ajudam no financiamento?", "Sim. Orientamos sobre as opções e simulamos a parcela junto com você — inclusive aqui no site, na calculadora acima."),
+        ("Como agendo uma visita?", "É só chamar no WhatsApp com o imóvel de interesse. Confirmamos o melhor horário na hora."),
+        ("Atendem a documentação e a escritura?", "Acompanhamos da proposta à assinatura, com apoio na papelada e nos prazos."),
+        ("Trabalham com imóveis de que faixa?", "Fale com a gente o que procura e o orçamento — apresentamos as opções que encaixam."),
+    ],
+    "clinica": [
+        ("Como marco uma consulta?", "Pelo WhatsApp, em minutos. Confirmamos o horário e já deixamos tudo pronto pro seu atendimento."),
+        ("Atendem por convênio ou particular?", "Chame no WhatsApp que explicamos as formas de atendimento e pagamento disponíveis."),
+        ("Preciso levar algum exame?", "Depende do procedimento — orientamos no agendamento o que trazer, pra você não perder a viagem."),
+        ("Tem horário fora do comercial?", "Consulte a disponibilidade no WhatsApp; buscamos o horário que caiba na sua rotina."),
+    ],
+    "_generico": [
+        ("Como faço um orçamento?", "É rápido: chame no WhatsApp com o que precisa e retornamos com os valores."),
+        ("Qual a região de atendimento?", "Fale com a gente sua localização que confirmamos o atendimento na sua área."),
+        ("Como funciona o prazo?", "Combinamos o prazo antes de começar e mantemos você informado até a entrega."),
+    ],
+}
+
+
+def _bloco_faq(t_id: str) -> str:
+    itens = _FAQ.get(t_id) or _FAQ["_generico"]
+    linhas = "\n".join(
+        f"<details class='faq-item'><summary>{html.escape(q)}</summary><p>{html.escape(a)}</p></details>"
+        for q, a in itens)
+    return f"""
+<section class="faq reveal" id="faq">
+  <h2>Perguntas frequentes</h2>
+  <div class="faq-lista">{linhas}</div>
+</section>"""
+
+
 def _bloco_calculadora(acento: str) -> str:
     """Calculadora de financiamento inline (imobiliária). Simula a parcela (tabela
     Price) no próprio site — o lead brinca com os números e já chega quente no
@@ -79,6 +114,7 @@ class GeradorTemplate(GeradorSiteProvider):
 
         # calculadora só pra imobiliária (data/segmento-gated: fora disso não renderiza)
         calculadora = _bloco_calculadora(acento) if getattr(t, "id", "") == "imobiliaria" else ""
+        faq = _bloco_faq(getattr(t, "id", ""))  # universal (cai no genérico se o segmento não tiver)
         numerado = t.assinatura == "index"
         cards = "\n".join(
             f'<article class="card reveal">'
@@ -156,6 +192,14 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .calc-out strong {{ font-family:"{t.fonte_titulo}",sans-serif; font-size:clamp(2rem,6vw,2.8rem);
   color:var(--acento); letter-spacing:{t.tracking}; }}
 .calc-nota {{ font-size:.75rem; color: color-mix(in srgb,var(--ink) 55%,var(--bg)); max-width:34rem; margin:.6rem auto 0; }}
+.faq {{ max-width:52rem; margin:3rem auto 0; padding:0 1.5rem; }}
+.faq h2 {{ text-align:center; font-size:clamp(1.4rem,3.5vw,2rem); margin-bottom:1.5rem; letter-spacing:{t.tracking}; }}
+.faq-item {{ border:1px solid var(--linha); border-radius:var(--radius); margin-bottom:.7rem; background:var(--superficie); overflow:hidden; }}
+.faq-item summary {{ cursor:pointer; padding:1rem 1.2rem; font-weight:600; font-family:"{t.fonte_titulo}",sans-serif;
+  list-style:none; display:flex; justify-content:space-between; align-items:center; gap:1rem; }}
+.faq-item summary::after {{ content:"+"; color:var(--acento); font-size:1.3rem; transition:transform .2s; }}
+.faq-item[open] summary::after {{ transform:rotate(45deg); }}
+.faq-item p {{ padding:0 1.2rem 1.1rem; color: color-mix(in srgb,var(--ink) 72%,var(--bg)); font-size:.95rem; }}
 {design.css_motion()}
 </style>
 </head>
@@ -172,6 +216,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   </div>
 </main>
 {calculadora}
+{faq}
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
 <section class="cta-final reveal" id="contato">
   <h2>Pronto pra começar?</h2>
