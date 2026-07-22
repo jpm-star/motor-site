@@ -64,6 +64,43 @@ def _bloco_faq(t_id: str) -> str:
 </section>"""
 
 
+def _bloco_form(zap: str, nome_empresa: str) -> str:
+    """Formulário progressivo: pede só nome+telefone primeiro (menos atrito); o
+    resto aparece depois. No envio, abre o WhatsApp já com os dados preenchidos —
+    o lead cai qualificado, sem backend."""
+    if not zap:
+        return ""
+    ne = html.escape(nome_empresa)
+    return f"""
+<section class="lead reveal" id="contato-form">
+  <h2>Fale com a gente</h2>
+  <p class="lead-sub">Deixe seu nome e telefone — o resto é rapidinho.</p>
+  <form class="lead-form" onsubmit="return leadEnviar(event)">
+    <div class="lead-row">
+      <input id="l-nome" required placeholder="Seu nome" autocomplete="name">
+      <input id="l-fone" required placeholder="Seu telefone (WhatsApp)" inputmode="tel" autocomplete="tel">
+    </div>
+    <div id="l-mais" hidden>
+      <textarea id="l-msg" rows="2" placeholder="O que você procura? (opcional)"></textarea>
+    </div>
+    <button type="submit">Continuar no WhatsApp</button>
+  </form>
+</section>
+<script>
+function leadEnviar(e){{
+  e.preventDefault();
+  var nome=document.getElementById("l-nome").value.trim();
+  var fone=document.getElementById("l-fone").value.trim();
+  var mais=document.getElementById("l-mais");
+  if(mais.hidden){{ mais.hidden=false; document.getElementById("l-msg").focus(); return false; }}
+  var msg=document.getElementById("l-msg").value.trim();
+  var t="Olá! Sou "+nome+" ("+fone+"). Vim pelo site da {ne}"+(msg?(" e procuro: "+msg):"")+".";
+  window.open("https://wa.me/{zap}?text="+encodeURIComponent(t),"_blank");
+  return false;
+}}
+</script>"""
+
+
 def _bloco_calculadora(acento: str) -> str:
     """Calculadora de financiamento inline (imobiliária). Simula a parcela (tabela
     Price) no próprio site — o lead brinca com os números e já chega quente no
@@ -115,6 +152,7 @@ class GeradorTemplate(GeradorSiteProvider):
         # calculadora só pra imobiliária (data/segmento-gated: fora disso não renderiza)
         calculadora = _bloco_calculadora(acento) if getattr(t, "id", "") == "imobiliaria" else ""
         faq = _bloco_faq(getattr(t, "id", ""))  # universal (cai no genérico se o segmento não tiver)
+        formulario = _bloco_form(zap, brief.nome_empresa)  # captura de lead → WhatsApp
         numerado = t.assinatura == "index"
         cards = "\n".join(
             f'<article class="card reveal">'
@@ -200,6 +238,15 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .faq-item summary::after {{ content:"+"; color:var(--acento); font-size:1.3rem; transition:transform .2s; }}
 .faq-item[open] summary::after {{ transform:rotate(45deg); }}
 .faq-item p {{ padding:0 1.2rem 1.1rem; color: color-mix(in srgb,var(--ink) 72%,var(--bg)); font-size:.95rem; }}
+.lead {{ max-width:44rem; margin:3rem auto 0; padding:2.5rem 1.5rem; text-align:center; }}
+.lead h2 {{ font-size:clamp(1.4rem,3.5vw,2rem); letter-spacing:{t.tracking}; }}
+.lead-sub {{ color: color-mix(in srgb,var(--ink) 66%,var(--bg)); margin:.4rem 0 1.4rem; }}
+.lead-row {{ display:flex; gap:.7rem; flex-wrap:wrap; }}
+.lead-form input, .lead-form textarea {{ flex:1; min-width:160px; padding:.85rem 1rem; border:1px solid var(--linha);
+  border-radius:calc(var(--radius)*.6); font-size:1rem; background:var(--bg); color:var(--ink); font-family:inherit; }}
+.lead-form textarea {{ width:100%; margin-top:.7rem; resize:vertical; }}
+.lead-form input:focus, .lead-form textarea:focus {{ outline:0; border-color:var(--acento); }}
+.lead-form button {{ margin-top:1rem; width:100%; }}
 {design.css_motion()}
 </style>
 </head>
@@ -217,6 +264,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 </main>
 {calculadora}
 {faq}
+{formulario}
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
 <section class="cta-final reveal" id="contato">
   <h2>Pronto pra começar?</h2>
