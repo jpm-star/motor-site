@@ -24,7 +24,7 @@ def test_template_gera_onepage_completa():
     html = site.arquivos["index.html"]
     assert "Contabilidade sem dor de cabeça" in html
     assert "20 anos de mercado" in html
-    assert 'https://wa.me/5566999998888"' in html  # contato vira link limpo (só dígitos)
+    assert 'https://wa.me/5566999998888?text=' in html  # link + mensagem contextual pré-preenchida
     assert 'name="viewport"' in html and 'property="og:title"' in html
     assert "--acento: #b45309" in html  # tema 'grafite' (direção contabilidade)
     assert "determinística" not in html and "[diferenciacao]" not in html  # sem placeholder

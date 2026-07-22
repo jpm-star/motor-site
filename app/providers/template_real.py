@@ -8,6 +8,7 @@ tema ancorado no assunto do negócio, sempre fora dos 4 clichês. Conteúdo do b
 from __future__ import annotations
 
 import html
+from urllib.parse import quote
 
 from .. import design
 from .base import BriefingSite, GeradorSiteProvider, SiteGerado
@@ -28,6 +29,39 @@ def _titulo_pagina(nome: str, nicho: str) -> str:
     return f"{nome} — {nicho}" if nicho else nome
 
 
+def _bloco_calculadora(acento: str) -> str:
+    """Calculadora de financiamento inline (imobiliária). Simula a parcela (tabela
+    Price) no próprio site — o lead brinca com os números e já chega quente no
+    WhatsApp. Puro HTML+JS, sem backend."""
+    return f"""
+<section class="calc reveal" id="simular">
+  <h2>Simule seu financiamento</h2>
+  <p class="calc-sub">Uma ideia da parcela em segundos. Sem compromisso.</p>
+  <div class="calc-grid">
+    <label>Valor do imóvel<input id="c-valor" type="number" value="350000" min="0" step="1000"></label>
+    <label>Entrada<input id="c-entrada" type="number" value="70000" min="0" step="1000"></label>
+    <label>Juros (% ao ano)<input id="c-juros" type="number" value="10.5" min="0" step="0.1"></label>
+    <label>Prazo (anos)<input id="c-prazo" type="number" value="30" min="1" max="35" step="1"></label>
+  </div>
+  <div class="calc-out"><span>Parcela estimada</span><strong id="c-parcela">—</strong></div>
+  <p class="calc-nota">Estimativa (tabela Price, juros fixos). Valores reais dependem do banco e da análise de crédito.</p>
+</section>
+<script>
+(function(){{
+  var ids=["c-valor","c-entrada","c-juros","c-prazo"].map(function(i){{return document.getElementById(i)}});
+  function fmt(v){{return v.toLocaleString("pt-BR",{{style:"currency",currency:"BRL",maximumFractionDigits:0}})}}
+  function calc(){{
+    var pv=(+ids[0].value)-(+ids[1].value), i=(+ids[2].value)/100/12, n=(+ids[3].value)*12;
+    var out=document.getElementById("c-parcela");
+    if(pv<=0||n<=0){{out.textContent="—";return}}
+    var p = i>0 ? pv*i/(1-Math.pow(1+i,-n)) : pv/n;
+    out.textContent=fmt(Math.round(p));
+  }}
+  ids.forEach(function(el){{el.addEventListener("input",calc)}}); calc();
+}})();
+</script>"""
+
+
 class GeradorTemplate(GeradorSiteProvider):
     name = "template"
 
@@ -35,11 +69,16 @@ class GeradorTemplate(GeradorSiteProvider):
         t = design.escolher_tema(brief.nicho, brief.nome_empresa)
         acento = brief.cor_primaria or t.acento  # marca do cliente vence o acento; resto do tema fica
         zap = _so_digitos(brief.cta_contato)
-        link = f"https://wa.me/{zap}" if zap else "#contato"
+        # CTA WhatsApp contextual: mensagem pré-preenchida citando o negócio (a
+        # conversa já chega qualificada, sem o cliente digitar do zero).
+        _msg = quote(f"Olá! Vim pelo site da {brief.nome_empresa} e queria saber mais.")
+        link = f"https://wa.me/{zap}?text={_msg}" if zap else "#contato"
         hero_fg = "#ffffff" if t.hero_escuro else t.ink
         hero_bg = (f"linear-gradient(155deg, {t.ink}, color-mix(in srgb, {t.ink} 78%, {acento}))"
                    if t.hero_escuro else t.bg)
 
+        # calculadora só pra imobiliária (data/segmento-gated: fora disso não renderiza)
+        calculadora = _bloco_calculadora(acento) if getattr(t, "id", "") == "imobiliaria" else ""
         numerado = t.assinatura == "index"
         cards = "\n".join(
             f'<article class="card reveal">'
@@ -102,6 +141,21 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   background:#25d366; display:flex; align-items:center; justify-content:center;
   box-shadow:0 6px 18px rgb(0 0 0 / .3); z-index:10; }}
 .zap-fixo svg {{ width:2rem; height:2rem; fill:#fff; }}
+.calc {{ max-width:66rem; margin:3rem auto 0; padding:2.5rem 1.5rem; background:var(--superficie);
+  border:1px solid var(--linha); border-radius:var(--radius); text-align:center; }}
+.calc h2 {{ font-size:clamp(1.4rem,3.5vw,2rem); letter-spacing:{t.tracking}; }}
+.calc-sub {{ color: color-mix(in srgb,var(--ink) 66%,var(--bg)); margin:.4rem 0 1.6rem; }}
+.calc-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; text-align:left; }}
+.calc-grid label {{ display:flex; flex-direction:column; gap:.35rem; font-size:.82rem; font-weight:600;
+  color: color-mix(in srgb,var(--ink) 78%,var(--bg)); }}
+.calc-grid input {{ padding:.7rem .8rem; border:1px solid var(--linha); border-radius:calc(var(--radius)*.6);
+  font-size:1rem; background:var(--bg); color:var(--ink); font-family:inherit; }}
+.calc-grid input:focus {{ outline:0; border-color:var(--acento); }}
+.calc-out {{ margin:1.8rem 0 .4rem; display:flex; flex-direction:column; gap:.2rem; }}
+.calc-out span {{ font-size:.85rem; color: color-mix(in srgb,var(--ink) 66%,var(--bg)); }}
+.calc-out strong {{ font-family:"{t.fonte_titulo}",sans-serif; font-size:clamp(2rem,6vw,2.8rem);
+  color:var(--acento); letter-spacing:{t.tracking}; }}
+.calc-nota {{ font-size:.75rem; color: color-mix(in srgb,var(--ink) 55%,var(--bg)); max-width:34rem; margin:.6rem auto 0; }}
 {design.css_motion()}
 </style>
 </head>
@@ -117,6 +171,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 {cards}
   </div>
 </main>
+{calculadora}
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
 <section class="cta-final reveal" id="contato">
   <h2>Pronto pra começar?</h2>
