@@ -90,7 +90,7 @@ main {{ max-width: 66rem; margin: 0 auto; padding: 4rem 1.5rem 1rem; }}
   padding: 1.7rem 1.6rem; }}
 .card .num {{ display:block; font-size:1.6rem; font-weight:800; color: color-mix(in srgb,var(--acento) 55%,var(--linha)); margin-bottom:.5rem; letter-spacing:{t.tracking}; }}
 .card h3 {{ color: var(--ink); margin-bottom:.5rem; font-size:1.12rem; font-weight:{t.peso_titulo}; letter-spacing:{t.tracking}; }}
-.card p {{ color: color-mix(in srgb, var(--ink) 66%, var(--bg)); font-size:.97rem; }}
+.card p {{ color: color-mix(in srgb, var(--ink) 78%, var(--bg)); font-size:.97rem; }}
 .faixa {{ max-width:66rem; margin: 2.5rem auto 0; padding: 2rem 1.5rem; text-align:center;
   background: var(--acento-suave); border-radius: var(--radius); }}
 .faixa strong {{ font-family:"{t.fonte_titulo}",sans-serif; color: var(--ink); font-size: clamp(1.2rem,3vw,1.6rem); letter-spacing:{t.tracking}; }}
