@@ -171,9 +171,12 @@ class GeradorTemplate(GeradorSiteProvider):
         t = design.escolher_tema(brief.nicho, brief.nome_empresa)
         acento = brief.cor_primaria or t.acento  # marca do cliente vence o acento; resto do tema fica
         zap = _so_digitos(brief.cta_contato)
-        # CTA WhatsApp contextual: mensagem pré-preenchida citando o negócio (a
-        # conversa já chega qualificada, sem o cliente digitar do zero).
-        _msg = quote(f"Olá! Vim pelo site da {brief.nome_empresa} e queria saber mais.")
+        # CTA WhatsApp contextual: mensagem pré-preenchida citando o SERVIÇO-âncora
+        # do cartucho (a conversa já chega qualificada). Sem serviço → cita o negócio.
+        _msg = quote(
+            f"Olá! Quero orçamento de {brief.servico_principal}." if brief.servico_principal
+            else f"Olá! Vim pelo site da {brief.nome_empresa} e queria saber mais."
+        )
         link = f"https://wa.me/{zap}?text={_msg}" if zap else "#contato"
         hero_fg = "#ffffff" if t.hero_escuro else t.ink
         hero_bg = (f"linear-gradient(155deg, {t.ink}, color-mix(in srgb, {t.ink} 78%, {acento}))"

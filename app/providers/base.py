@@ -31,6 +31,8 @@ class BriefingSite:
     cta_contato: str
     angulos_usados: list[AnguloAnalise] = field(default_factory=list)
     cor_primaria: str | None = None  # cor de marca (hex) — o gerador usa se vier
+    cidade: str = ""            # 1ª região do cartucho — SEO local (title + JSON-LD)
+    servico_principal: str = ""  # serviço-âncora do cartucho — CTA pré-preenchido
 
 
 @dataclass
