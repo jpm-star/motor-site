@@ -54,6 +54,8 @@ class StubOrquestrador(OrquestradorProvider):
             cta_contato=briefing.get("whatsapp", "(a combinar)"),
             angulos_usados=angulos,
             cor_primaria=briefing.get("cor_primaria"),
+            cidade=briefing.get("cidade", "").strip(),
+            servico_principal=briefing.get("servico_principal", "").strip(),
         )
 
 
