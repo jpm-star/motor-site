@@ -8,6 +8,7 @@ tema ancorado no assunto do negócio, sempre fora dos 4 clichês. Conteúdo do b
 from __future__ import annotations
 
 import html
+import json
 from urllib.parse import quote
 
 from .. import design
@@ -22,11 +23,35 @@ def _so_digitos(contato: str) -> str:
     return "".join(c for c in str(contato) if c.isdigit())
 
 
-def _titulo_pagina(nome: str, nicho: str) -> str:
+def _titulo_pagina(nome: str, nicho: str, cidade: str = "") -> str:
+    # SEO local: "{nicho} em {cidade} | {nome}" — a busca "X em <cidade>" é a que converte.
+    if nicho and cidade:
+        return f"{nicho} em {cidade} | {nome}"
     # não repetir o nicho quando o nome já o contém ("São Francisco Engenharia — Engenharia")
     if nicho and nicho.strip().lower() in nome.lower():
         return nome
     return f"{nome} — {nicho}" if nicho else nome
+
+
+def _json_ld_local(brief) -> str:
+    """JSON-LD schema.org/LocalBusiness preenchido do cartucho — só campos reais
+    (nada inventado). Ajuda o Google a mostrar o negócio na busca/mapa local."""
+    dados = {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": brief.nome_empresa,
+        "description": brief.subheadline,
+    }
+    if brief.nicho:
+        dados["knowsAbout"] = brief.nicho
+    if getattr(brief, "cidade", ""):
+        dados["areaServed"] = brief.cidade
+        dados["address"] = {"@type": "PostalAddress", "addressLocality": brief.cidade}
+    zap = _so_digitos(brief.cta_contato)
+    if zap:
+        dados["telephone"] = f"+{zap}"
+    corpo = json.dumps(dados, ensure_ascii=False)
+    return f'<script type="application/ld+json">{corpo}</script>'
 
 
 # FAQ por segmento (build-time): perguntas reais que o cliente faz antes de chamar.
@@ -201,11 +226,12 @@ class GeradorTemplate(GeradorSiteProvider):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{_e(_titulo_pagina(brief.nome_empresa, brief.nicho))}</title>
+<title>{_e(_titulo_pagina(brief.nome_empresa, brief.nicho, brief.cidade))}</title>
 <meta name="description" content="{_e(brief.subheadline)}">
 <meta property="og:title" content="{_e(brief.nome_empresa)}">
 <meta property="og:description" content="{_e(brief.subheadline)}">
 <meta property="og:type" content="website">
+{_json_ld_local(brief)}
 <link rel="icon" href="{design.favicon(brief.nome_empresa, acento)}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
