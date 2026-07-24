@@ -213,11 +213,29 @@ class GeradorTemplate(GeradorSiteProvider):
         formulario = _bloco_form(zap, brief.nome_empresa)  # captura de lead → WhatsApp
         depoimentos = _bloco_depoimentos()  # exemplos rotativos, sempre marcados "exemplo"
         numerado = t.assinatura == "index"
+        # seções do briefing + PISO de valor: se o briefing é pobre (<3 seções), o
+        # template compensa com cards VERDADEIROS (nada inventado), pra nunca sair
+        # uma página magra. O que importa pro prospect: confiança + como fala + região.
+        secoes = list(brief.secoes)
+        _serv = brief.servico_principal or brief.nicho or "seu serviço"
+        _reg = f" em {brief.cidade}" if getattr(brief, "cidade", "") else " na sua região"
+        piso = [
+            {"titulo": "Orçamento sem compromisso",
+             "corpo": f"Chame no WhatsApp e receba os valores de {_serv} antes de fechar qualquer coisa."},
+            {"titulo": f"{_serv[:38].capitalize()} feito direito",
+             "corpo": "Atendimento próximo, prazo combinado na frente e trabalho entregue como prometido."},
+            {"titulo": f"Atende{_reg}",
+             "corpo": "Perto de você e sem enrolação — a gente resolve o que você precisa, rápido."},
+        ]
+        for p in piso:
+            if len(secoes) >= 3:
+                break
+            secoes.append(p)
         cards = "\n".join(
             f'<article class="card reveal">'
             f'{f"<span class=num>{i:02d}</span>" if numerado else ""}'
             f'<h3>{_e(s["titulo"])}</h3><p>{_e(s["corpo"])}</p></article>'
-            for i, s in enumerate(brief.secoes, 1)
+            for i, s in enumerate(secoes, 1)
         )
         kicker = _e(brief.nicho).upper() if brief.nicho else ""
 
@@ -315,6 +333,15 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   letter-spacing:.1em; color:var(--acento); background:var(--bg); border:1px solid var(--linha); border-radius:99px; padding:.15rem .55rem; }}
 .depo-card blockquote {{ font-size:clamp(1.05rem,2.6vw,1.3rem); font-family:"{t.fonte_titulo}",sans-serif; color:var(--ink); line-height:1.4; }}
 .depo-card figcaption {{ margin-top:.9rem; font-size:.85rem; color: color-mix(in srgb,var(--ink) 60%,var(--bg)); }}
+.hero-trust {{ margin-top:1.6rem; font-size:.82rem; font-weight:600; letter-spacing:.01em;
+  opacity:.82; display:inline-block; }}
+.sec-titulo {{ text-align:center; font-size:clamp(1.5rem,3.6vw,2.1rem); font-weight:{t.peso_titulo};
+  letter-spacing:{t.tracking}; margin-bottom:2rem; }}
+.sec-titulo::after {{ content:""; display:block; width:2.4rem; height:3px; border-radius:3px;
+  background:var(--acento); margin:.7rem auto 0; }}
+.lead-form button {{ margin-top:1rem; width:100%; background:var(--acento); color:#fff; font-weight:700;
+  border:0; padding:.95rem 2rem; border-radius:99px; font-size:1rem; font-family:"{t.fonte_titulo}",sans-serif;
+  cursor:pointer; box-shadow:0 6px 18px -4px color-mix(in srgb,var(--acento) 55%,transparent); }}
 {design.css_motion()}
 </style>
 </head>
@@ -324,8 +351,12 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   <h1>{_e(brief.headline)}</h1>
   <p>{_e(brief.subheadline)}</p>
   <a class="btn" href="{link}">{_e(brief.cta_texto)}</a>
+  <div class="hero-trust">{' &nbsp;·&nbsp; '.join(
+     x for x in [f'Atende {_e(brief.cidade)}' if getattr(brief,'cidade','') else '',
+                 'Resposta rápida no WhatsApp', 'Orçamento sem compromisso'] if x)}</div>
 </header>
 <main>
+  <h2 class="sec-titulo reveal">Por que a {_e(brief.nome_empresa)}</h2>
   <div class="grid">
 {cards}
   </div>

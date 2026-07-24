@@ -51,6 +51,16 @@ _IMOBILIARIA = Tema(
     google="Manrope:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600",
     radius="14px", peso_titulo="800", tracking="-.025em", assinatura="index", hero_escuro=True)
 
+# Oficina/automotivo — base AÇO FRIA (não creme quente) + azul-diagnóstico +
+# grotesca condensada industrial + hero grafite. Foge do clichê creme+terracota
+# que a mecânica caía por hash. Azul = precisão/confiança ("não me passam a perna").
+_OFICINA = Tema(
+    id="oficina", ink="#161a1f", bg="#e9edf1", superficie="#ffffff", linha="#d3d9e0",
+    acento="#1857a8", acento_suave="#e4ecf6",
+    fonte_titulo="Archivo", fonte_corpo="Inter",
+    google="Archivo:wght@600;700;800&family=Inter:wght@400;500;600",
+    radius="8px", peso_titulo="800", tracking="-.02em", assinatura="processo", hero_escuro=True)
+
 # Clínica — claro + deep teal fechado (guia, não decorativo) + sans humanista.
 _CLINICA = Tema(
     id="clinica", ink="#14201d", bg="#fbfdfc", superficie="#ffffff", linha="#e3ece9",
@@ -106,6 +116,9 @@ _ASSUNTO = {
     "ambient": "floresta", "sustent": "floresta", "agro": "floresta", "jardim": "floresta",
     "spa": "petroleo", "bem-estar": "petroleo", "estét": "carmim", "beleza": "carmim",
     "academ": "ardosia", "fitness": "ardosia", "cross": "ardosia",
+    "pizz": "vinho", "restaur": "vinho", "lanch": "vinho", "hamburg": "vinho", "food": "vinho",
+    "pet": "floresta", "veterin": "floresta", "animal": "floresta", "banho e tosa": "floresta",
+    "advog": "grafite",
 }
 
 
@@ -120,6 +133,9 @@ def escolher_tema(nicho: str, nome: str) -> Tema:
         return _IMOBILIARIA
     if any(k in n for k in ("clín", "clin", "saúde", "saude", "odonto", "médic", "medic", "consult")):
         return _CLINICA
+    if any(k in n for k in ("mecân", "mecan", "auto ", "automot", "oficina", "carro", "veícul",
+                            "veicul", "pneu", "funilaria", "borracharia")):
+        return _OFICINA
     # 2) segmento sem direção: base ancorada no assunto (senão hash), com o acento
     #    NUDGED por nome → dois negócios não caem na mesma paleta (spec: nenhum
     #    site idêntico). O par tipográfico vem do pool (finito): com muitos sites
@@ -215,10 +231,13 @@ def css_motion() -> str:
 
 
 def js_reveal() -> str:
+    # rede de segurança: se uma seção nunca é observada (captura/preview/primeiro
+    # paint sem scroll), ela AINDA aparece após 1.4s — nunca fica um "vazio".
     return ("<script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches){"
             "const o=new IntersectionObserver((es)=>{es.forEach((e,i)=>{if(e.isIntersecting){"
             "setTimeout(()=>e.target.classList.add('vis'),i*90);o.unobserve(e.target);}});},"
-            "{threshold:.15});document.querySelectorAll('.reveal').forEach(el=>o.observe(el));}"
+            "{threshold:.15});document.querySelectorAll('.reveal').forEach(el=>o.observe(el));"
+            "setTimeout(()=>document.querySelectorAll('.reveal:not(.vis)').forEach(el=>el.classList.add('vis')),1400);}"
             "else{document.querySelectorAll('.reveal').forEach(el=>el.classList.add('vis'));}</script>")
 
 
