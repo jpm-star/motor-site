@@ -346,12 +346,17 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 </style>
 </head>
 <body>
-<header class="hero">
-  {f'<span class="kicker">{kicker}</span>' if kicker else ''}
-  <h1>{_e(brief.headline)}</h1>
-  <p>{_e(brief.subheadline)}</p>
-  <a class="btn" href="{link}">{_e(brief.cta_texto)}</a>
-  <div class="hero-trust">{' &nbsp;·&nbsp; '.join(
+<nav class="nav">
+  <b><a href="#topo" style="color:inherit;text-decoration:none;background:none;padding:0">{_e(brief.nome_empresa)}</a></b>
+  <a href="{link}">{_e(brief.cta_texto)}</a>
+</nav>
+<header class="hero" id="topo">
+  {'<div class="aurora"></div>' if t.hero_escuro else ''}
+  {f'<span class="kicker load load-1">{kicker}</span>' if kicker else ''}
+  <h1 class="load load-2">{_e(brief.headline)}</h1>
+  <p class="load load-3">{_e(brief.subheadline)}</p>
+  <a class="btn load load-4" href="{link}">{_e(brief.cta_texto)}</a>
+  <div class="hero-trust load load-5">{' &nbsp;·&nbsp; '.join(
      x for x in [f'Atende {_e(brief.cidade)}' if getattr(brief,'cidade','') else '',
                  'Resposta rápida no WhatsApp', 'Orçamento sem compromisso'] if x)}</div>
 </header>
@@ -375,6 +380,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   <svg viewBox="0 0 32 32"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.6.8 5 2.3 7L4 29l7.2-2.2c1.9 1 4 1.6 6.2 1.6h.6c6.6 0 12-5.4 12-12S22.6 3 16 3zm5.9 17c-.3.8-1.6 1.5-2.3 1.6-.6.1-1.3.2-3.8-.8-3.2-1.3-5.2-4.5-5.4-4.7-.2-.2-1.3-1.7-1.3-3.2s.8-2.3 1.1-2.6c.3-.3.6-.4.8-.4h.6c.2 0 .5-.1.7.5l1 2.4c.1.2.1.4 0 .6l-.4.6-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.6 2.1 2.6 1.5 1.3 2.7 1.7 3.1 1.9.4.2.6.2.8-.1l1-1.2c.2-.3.5-.2.8-.1l2.2 1c.3.2.5.3.6.4.1.3.1.9-.2 1.6z"/></svg>
 </a>
 {design.js_reveal()}
+{design.js_interacoes()}
 </body>
 </html>
 """

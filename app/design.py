@@ -215,19 +215,60 @@ SPRING = "cubic-bezier(.175,.885,.32,1.275)"
 
 def css_motion() -> str:
     return f"""
-.reveal {{ opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }}
+html {{ scroll-behavior: smooth; }}
+.reveal {{ opacity: 0; transform: translateY(22px); transition: opacity .7s {SPRING}, transform .7s {SPRING}; }}
 .reveal.vis {{ opacity: 1; transform: none; }}
-.card {{ transition: transform .35s {SPRING}, box-shadow .35s ease, border-color .35s ease; position: relative; overflow: hidden; }}
-.card::before {{ content:""; position:absolute; inset:0; background:linear-gradient(115deg,transparent 40%,color-mix(in srgb,var(--acento) 14%,transparent) 50%,transparent 60%);
-  transform: translateX(-120%); transition: transform .7s ease; }}
-.card:hover {{ transform: translateY(-6px) scale(1.012); box-shadow: 0 18px 40px -12px color-mix(in srgb,var(--ink) 30%,transparent); border-color: color-mix(in srgb,var(--acento) 40%,var(--linha)); }}
-.card:hover::before {{ transform: translateX(120%); }}
+/* entrada em SEQUÊNCIA no load (hero) — o "abrir de cortina" premium */
+@keyframes rise {{ from {{ opacity:0; transform:translateY(26px); }} to {{ opacity:1; transform:none; }} }}
+.load {{ opacity:0; animation: rise .8s {SPRING} forwards; }}
+.load-1{{animation-delay:.06s}} .load-2{{animation-delay:.16s}} .load-3{{animation-delay:.26s}}
+.load-4{{animation-delay:.38s}} .load-5{{animation-delay:.5s}}
+/* AURORA — camada de gradiente viva atrás do hero escuro (feel AI-native) */
+.hero {{ position:relative; overflow:hidden; }}
+.aurora {{ position:absolute; inset:-45% -15% auto -15%; height:170%; z-index:0; pointer-events:none;
+  background: radial-gradient(42% 52% at 18% 28%, color-mix(in srgb,var(--acento) 60%,transparent), transparent 70%),
+              radial-gradient(38% 48% at 82% 22%, color-mix(in srgb,var(--acento) 34%,transparent), transparent 72%),
+              radial-gradient(45% 55% at 60% 90%, color-mix(in srgb,var(--acento) 26%,transparent), transparent 70%);
+  filter: blur(46px) saturate(1.2); animation: aurora 16s ease-in-out infinite alternate; }}
+@keyframes aurora {{ 0% {{ transform:translate3d(0,0,0) scale(1); opacity:.85; }}
+  100% {{ transform:translate3d(2%,-7%,0) scale(1.18); opacity:1; }} }}
+.hero > * {{ position:relative; z-index:1; }}
+/* cards: elevação + SPOTLIGHT que segue o cursor + brilho varrendo */
+.card {{ transition: transform .38s {SPRING}, box-shadow .38s ease, border-color .38s ease; position: relative; overflow: hidden; }}
+.card::before {{ content:""; position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .4s ease;
+  background: radial-gradient(220px circle at var(--mx,50%) var(--my,0%), color-mix(in srgb,var(--acento) 16%,transparent), transparent 65%); }}
+.card:hover::before {{ opacity:1; }}
+.card:hover {{ transform: translateY(-7px) scale(1.014); box-shadow: 0 22px 48px -14px color-mix(in srgb,var(--ink) 32%,transparent); border-color: color-mix(in srgb,var(--acento) 45%,var(--linha)); }}
+.card > * {{ position:relative; z-index:2; }}
 .btn {{ transition: transform .3s {SPRING}, box-shadow .3s ease, letter-spacing .3s ease; }}
-.btn:hover {{ transform: translateY(-3px) scale(1.03); letter-spacing: .01em; box-shadow: 0 14px 30px -8px color-mix(in srgb,var(--acento) 55%,transparent); }}
+.btn:hover {{ transform: translateY(-3px) scale(1.03); letter-spacing: .01em; box-shadow: 0 16px 34px -8px color-mix(in srgb,var(--acento) 60%,transparent); }}
+/* NAV fixo com blur — aparece ao rolar (brand + CTA + voltar ao topo) */
+.nav {{ position:fixed; top:0; left:0; right:0; z-index:30; display:flex; justify-content:space-between; align-items:center;
+  gap:1rem; padding:.7rem clamp(1rem,4vw,2.5rem); backdrop-filter:saturate(1.4) blur(14px);
+  background:color-mix(in srgb,var(--bg) 72%,transparent); border-bottom:1px solid transparent;
+  transform:translateY(-105%); transition:transform .45s {SPRING}, border-color .4s; }}
+.nav.on {{ transform:none; border-color:var(--linha); }}
+.nav b {{ font-family:inherit; font-weight:800; letter-spacing:-.02em; font-size:1.02rem; }}
+.nav a {{ text-decoration:none; color:#fff; background:var(--acento); font-weight:700; font-size:.85rem;
+  padding:.5rem 1.1rem; border-radius:99px; }}
 @media (prefers-reduced-motion: reduce) {{
+  html {{ scroll-behavior:auto; }}
   .reveal {{ opacity:1; transform:none; transition:none; }}
-  .card, .card::before, .btn {{ transition:none; }}
+  .load {{ opacity:1; animation:none; }} .aurora {{ animation:none; }}
+  .card, .card::before, .btn, .nav {{ transition:none; }}
 }}"""
+
+
+def js_interacoes() -> str:
+    """Spotlight nos cards (cursor) + nav que aparece ao rolar. Respeita reduced-motion."""
+    return ("<script>(function(){"
+            "if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;"
+            "document.querySelectorAll('.card').forEach(function(c){c.addEventListener('pointermove',function(e){"
+            "var r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');"
+            "c.style.setProperty('--my',(e.clientY-r.top)+'px');});});"
+            "var nav=document.querySelector('.nav');if(nav){var on=function(){"
+            "nav.classList.toggle('on',window.scrollY>560);};on();addEventListener('scroll',on,{passive:true});}"
+            "})();</script>")
 
 
 def js_reveal() -> str:
