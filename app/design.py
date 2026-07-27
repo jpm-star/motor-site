@@ -39,6 +39,8 @@ class Tema:
     tracking: str       # letter-spacing do título
     assinatura: str     # 'index' | 'processo' | 'faixa' — o elemento não-genérico
     hero_escuro: bool   # hero sobre ink escuro (True) ou claro (False)
+    acento_ink: str = "#ffffff"  # cor do TEXTO sobre o acento (botão). Default branco
+    #                              (acento escuro); acento CLARO/neon precisa texto escuro.
 
 
 # === DIREÇÕES PRÉ-PENSADAS =================================================
@@ -68,6 +70,18 @@ _CLINICA = Tema(
     fonte_titulo="Instrument Sans", fonte_corpo="Source Sans 3",
     google="Instrument+Sans:wght@500;600;700&family=Source+Sans+3:wght@400;500;600",
     radius="16px", peso_titulo="600", tracking="-.01em", assinatura="processo", hero_escuro=False)
+
+# JPOS — MARCA DA CASA (dogfooding). Único tema de FUNDO ESCURO + neon: aqui o
+# "clichê #3" é IDENTIDADE intencional (tech/matrix/vendável), não default preguiçoso.
+# Retornado direto no topo do escolher_tema → não passa pelo guard anti-clichê.
+# ink CLARO sobre bg escuro; o template resolve texto via color-mix(ink, bg).
+_JPOS = Tema(
+    id="jpos", ink="#e9eef7", bg="#0c1017", superficie="#141a24", linha="#26303f",
+    acento="#00e6a2", acento_suave="#0e2a24",
+    fonte_titulo="Space Grotesk", fonte_corpo="Inter",
+    google="Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600",
+    radius="12px", peso_titulo="800", tracking="-.025em", assinatura="faixa", hero_escuro=True,
+    acento_ink="#04140e")  # texto escuro sobre o neon (contraste)
 
 # === POOL GENERATIVO (segmentos sem direção pré-pensada) ===================
 # Cada entrada é uma direção distinta, com PAR TIPOGRÁFICO único (garante que dois
@@ -128,6 +142,10 @@ def _norm(s: str) -> str:
 
 def escolher_tema(nicho: str, nome: str) -> Tema:
     n = _norm(nicho)
+    # 0) marca da casa: JPOS/agência de IA → tema dark-neon dedicado (bypassa o guard)
+    if any(k in n for k in ("jpos", "agência de ia", "agencia de ia", "automação de ia",
+                            "automacao de ia", "micro-saas de ia", "ia sob medida")):
+        return _JPOS
     # 1) direção pré-pensada — cor EXATA e intencional, sem variação
     if any(k in n for k in ("imob", "imóv", "imov", "corretor", "lotea")):
         return _IMOBILIARIA

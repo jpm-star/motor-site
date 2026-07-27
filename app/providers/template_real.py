@@ -256,6 +256,7 @@ class GeradorTemplate(GeradorSiteProvider):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={t.google}&display=swap">
 <style>
 :root {{ --acento: {acento}; --acento-suave: {t.acento_suave}; --ink: {t.ink};
+  --acento-ink: {t.acento_ink};
   --bg: {t.bg}; --superficie: {t.superficie}; --linha: {t.linha}; --radius: {t.radius}; }}
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ font-family: "{t.fonte_corpo}", system-ui, -apple-system, sans-serif;
@@ -270,11 +271,11 @@ h1, h2, h3, .kicker, .num {{ font-family: "{t.fonte_titulo}", system-ui, sans-se
 .hero h1 {{ font-size: clamp(2rem, 5.5vw, 3.5rem); font-weight: {t.peso_titulo}; max-width: 52rem;
   margin: 0 auto .9rem; letter-spacing: {t.tracking}; line-height: 1.08; }}
 .hero p {{ font-size: clamp(1.05rem, 2.4vw, 1.3rem); opacity: .9; max-width: 40rem; margin: 0 auto 2.2rem; }}
-.btn {{ display:inline-block; background: var(--acento); color:#fff; font-weight:700;
+.btn {{ display:inline-block; background: var(--acento); color:var(--acento-ink); font-weight:700;
   padding:.95rem 2.3rem; border-radius:99px; text-decoration:none; font-family:"{t.fonte_titulo}",sans-serif;
   box-shadow: 0 6px 18px -4px color-mix(in srgb, var(--acento) 60%, transparent); }}
 .hero .btn {{ background: {('#fff' if t.hero_escuro else 'var(--acento)')};
-  color: {(acento if t.hero_escuro else '#fff')}; }}
+  color: {('#0b0f16' if t.hero_escuro else 'var(--acento-ink)')}; }}
 main {{ max-width: 66rem; margin: 0 auto; padding: 4rem 1.5rem 1rem; }}
 .grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.3rem; }}
 .card {{ background: var(--superficie); border:1px solid var(--linha); border-radius: var(--radius);
