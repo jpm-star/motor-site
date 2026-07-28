@@ -189,24 +189,44 @@ def _bloco_calculadora(acento: str) -> str:
 </script>"""
 
 
-def _bloco_preco(ancora: dict) -> str:
-    """Seção ÂNCORA DE PREÇO (padrão do Radar). '' se o cartucho não trouxe (fallback
-    gracioso — cartucho de cliente sem `ancora_preco` gera igual a antes)."""
+def _bloco_preco(ancora: dict, link: str) -> str:
+    """FAIXA DE ENTRADA (padrão do Radar), não tabela fechada: menor preço como âncora
+    + CTA pro valor exato no WhatsApp. Mantém o gatilho, tira o compromisso de tabela
+    pública fixa. '' se o cartucho não trouxe (fallback gracioso)."""
     if not isinstance(ancora, dict) or not ancora:
         return ""
+    entrada = ""
+    for tier in ancora.values():  # 1º tier = entrada (o "a partir de")
+        if isinstance(tier, dict) and str(tier.get("preco", "")).strip():
+            entrada = str(tier["preco"]).strip()
+            break
+    if not entrada:
+        return ""
+    return ('<section class="preco reveal" id="planos"><div class="preco-faixa">'
+            f'<h2 class="sec-titulo" style="margin-bottom:.5rem">Planos a partir de {_e(entrada)}</h2>'
+            '<p>Valor exato pelo WhatsApp — a IA te passa na hora, sem orçamento demorado.</p>'
+            f'<a class="btn btn-glow" href="{link}">Ver meu plano no WhatsApp</a>'
+            '</div></section>')
+
+
+def _bloco_catalogo(catalogo: list) -> str:
+    """Seção CATÁLOGO: o que está incluso em cada tier — ESCOPO concreto (não preço).
+    '' se o cartucho não trouxe (fallback gracioso)."""
+    if not isinstance(catalogo, list) or not catalogo:
+        return ""
     cards = []
-    for tier in ancora.values():
-        if not isinstance(tier, dict):
+    for it in catalogo:
+        if not isinstance(it, dict) or not str(it.get("tier", "")).strip():
             continue
-        nome, preco, resumo = str(tier.get("nome", "")), str(tier.get("preco", "")), str(tier.get("resumo", ""))
-        if not (nome or preco):
-            continue
-        cards.append(f'<article class="preco-card"><h3>{_e(nome)}</h3>'
-                     f'<div class="preco-valor">{_e(preco)}</div><p>{_e(resumo)}</p></article>')
+        preco = str(it.get("preco_ref", "")).strip()
+        lis = "".join(f"<li>{_e(str(x))}</li>" for x in (it.get("inclui") or []) if str(x).strip())
+        cards.append(f'<article class="cat-card"><h3>{_e(str(it["tier"]))}</h3>'
+                     f'{f"<div class=cat-preco>{_e(preco)}</div>" if preco else ""}'
+                     f'<ul>{lis}</ul></article>')
     if not cards:
         return ""
-    return ('<section class="preco reveal" id="planos"><h2 class="sec-titulo">Preço claro, sem orçamento demorado</h2>'
-            f'<div class="preco-grid">{"".join(cards)}</div></section>')
+    return ('<section class="catalogo reveal" id="o-que-inclui"><h2 class="sec-titulo">O que está incluso</h2>'
+            f'<div class="cat-grid">{"".join(cards)}</div></section>')
 
 
 def _bloco_antes_depois(itens: list) -> str:
@@ -252,8 +272,16 @@ class GeradorTemplate(GeradorSiteProvider):
         faq = _bloco_faq(getattr(t, "id", ""))  # universal (cai no genérico se o segmento não tiver)
         formulario = _bloco_form(zap, brief.nome_empresa)  # captura de lead → WhatsApp
         depoimentos = _bloco_depoimentos()  # exemplos rotativos, sempre marcados "exemplo"
-        preco = _bloco_preco(brief.ancora_preco)               # âncora de preço (Radar) — '' se cartucho não trouxe
+        preco = _bloco_preco(brief.ancora_preco, link)         # FAIXA de entrada + CTA (Radar) — '' se ausente
         antesdepois = _bloco_antes_depois(brief.antes_depois)  # antes/depois (Radar) — '' se ausente
+        catalogo = _bloco_catalogo(brief.catalogo)             # escopo por tier — '' se cartucho não trouxe
+        # Logo de marca (SVG do cartucho) na nav + favicon; sem logo → texto (regressão).
+        marca = (f'<a href="#topo" class="marca" aria-label="{_e(brief.nome_empresa)}">{brief.logo_svg}</a>'
+                 if brief.logo_svg else
+                 f'<b><a href="#topo" style="color:inherit;text-decoration:none;background:none;padding:0">{_e(brief.nome_empresa)}</a></b>')
+        favicon = (f'data:image/svg+xml,{quote(brief.logo_svg)}' if brief.logo_svg
+                   else design.favicon(brief.nome_empresa, acento))
+        cta_final = "Faça seu site funcionar"  # variação de CTA (não repete a mesma frase 4x)
         numerado = t.assinatura == "index"
         # seções do briefing + PISO de valor: se o briefing é pobre (<3 seções), o
         # template compensa com cards VERDADEIROS (nada inventado), pra nunca sair
@@ -292,7 +320,7 @@ class GeradorTemplate(GeradorSiteProvider):
 <meta property="og:description" content="{_e(brief.subheadline)}">
 <meta property="og:type" content="website">
 {_json_ld_local(brief)}
-<link rel="icon" href="{design.favicon(brief.nome_empresa, acento)}">
+<link rel="icon" href="{favicon}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={t.google}&display=swap">
@@ -400,12 +428,30 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .ad-quote {{ background:var(--acento-suave); border-radius:var(--radius); padding:1.4rem; font-size:1.05rem; }}
 .ad-quote cite {{ display:block; margin-top:.6rem; font-size:.85rem; opacity:.7; font-style:normal; }}
 @media(max-width:560px) {{ .ad-par {{ grid-template-columns:1fr; }} }}
+.marca {{ display:inline-flex; align-items:center; }}
+.marca svg {{ height:34px; width:34px; display:block; }}
+.preco-faixa {{ max-width:640px; margin:0 auto; text-align:center; background:var(--acento-suave); border:1px solid var(--linha); border-radius:var(--radius); padding:2.2rem 1.6rem; }}
+.preco-faixa p {{ color:color-mix(in srgb,var(--ink) 65%,var(--bg)); margin-bottom:1.3rem; }}
+.catalogo {{ max-width:1040px; margin:3rem auto; padding:0 1.2rem; }}
+.cat-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.1rem; }}
+.cat-card {{ background:var(--acento-suave); border:1px solid var(--linha); border-radius:var(--radius); padding:1.6rem; transition:transform .38s cubic-bezier(.2,.7,.2,1), box-shadow .38s ease, border-color .38s ease; }}
+.cat-card:hover {{ transform:translateY(-6px); box-shadow:0 20px 44px -14px color-mix(in srgb,var(--ink) 28%,transparent); border-color:color-mix(in srgb,var(--acento) 45%,var(--linha)); }}
+.cat-card h3 {{ font-size:1.1rem; margin-bottom:.2rem; }}
+.cat-preco {{ font-size:.85rem; font-weight:700; color:var(--acento); margin-bottom:.7rem; }}
+.cat-card ul {{ list-style:none; padding:0; margin:0; display:grid; gap:.55rem; }}
+.cat-card li {{ position:relative; padding-left:1.4rem; font-size:.92rem; line-height:1.4; }}
+.cat-card li::before {{ content:"✓"; position:absolute; left:0; color:var(--acento); font-weight:800; }}
+.preco-card:hover {{ transform:translateY(-5px); box-shadow:0 18px 40px -14px color-mix(in srgb,var(--ink) 26%,transparent); }}
+@keyframes glow-pulse {{ 0%,100% {{ box-shadow:0 8px 24px -6px color-mix(in srgb,var(--acento) 50%,transparent); }} 50% {{ box-shadow:0 10px 34px -4px color-mix(in srgb,var(--acento) 80%,transparent); }} }}
+.btn-glow {{ animation:glow-pulse 2.6s ease-in-out infinite; }}
+.btn-glow:hover {{ animation:none; }}
+@media(prefers-reduced-motion:reduce) {{ .btn-glow {{ animation:none; }} }}
 {design.css_motion()}
 </style>
 </head>
 <body>
 <nav class="nav">
-  <b><a href="#topo" style="color:inherit;text-decoration:none;background:none;padding:0">{_e(brief.nome_empresa)}</a></b>
+  {marca}
   <a href="{link}">{_e(brief.cta_texto)}</a>
 </nav>
 <header class="hero" id="topo">
@@ -413,7 +459,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   {f'<span class="kicker load load-1">{kicker}</span>' if kicker else ''}
   <h1 class="load load-2">{_e(brief.headline)}</h1>
   <p class="load load-3">{_e(brief.subheadline)}</p>
-  <a class="btn load load-4" href="{link}">{_e(brief.cta_texto)}</a>
+  <a class="btn btn-glow load load-4" href="{link}">{_e(brief.cta_texto)}</a>
   <div class="hero-trust load load-5">{' &nbsp;·&nbsp; '.join(
      x for x in [f'Atende {_e(brief.cidade)}' if getattr(brief,'cidade','') else '',
                  'Resposta rápida no WhatsApp', 'Orçamento sem compromisso'] if x)}</div>
@@ -424,6 +470,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 {cards}
   </div>
 </main>
+{catalogo}
 {antesdepois}
 {preco}
 {calculadora}
@@ -433,7 +480,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
 <section class="cta-final reveal" id="contato">
   <h2>Pronto pra começar?</h2>
-  <a class="btn" href="{link}">{_e(brief.cta_texto)}</a>
+  <a class="btn btn-glow" href="{link}">{_e(cta_final)}</a>
 </section>
 <footer>© {_e(brief.nome_empresa)}{f' · {_e(brief.nicho)}' if brief.nicho else ''}</footer>
 <a class="zap-fixo" href="{link}" aria-label="WhatsApp">

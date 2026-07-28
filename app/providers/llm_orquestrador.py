@@ -135,6 +135,8 @@ class LLMOrquestrador(OrquestradorProvider):
             servico_principal=briefing.get("servico_principal", "").strip(),
             ancora_preco=briefing.get("ancora_preco") or {},   # padrões do Radar (vazio = sem seção)
             antes_depois=briefing.get("prova_social") or [],
+            logo_svg=briefing.get("logo_svg", ""),
+            catalogo=briefing.get("catalogo") or [],
         )
 
 

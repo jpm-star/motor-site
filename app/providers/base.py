@@ -35,6 +35,8 @@ class BriefingSite:
     servico_principal: str = ""  # serviço-âncora do cartucho — CTA pré-preenchido
     ancora_preco: dict = field(default_factory=dict)   # tiers de preço do cartucho — template renderiza SÓ se vier
     antes_depois: list = field(default_factory=list)   # prova social antes/depois — idem (vazio = sem seção)
+    logo_svg: str = ""                                 # logo de marca (SVG inline) — nav + favicon (vazio = texto)
+    catalogo: list = field(default_factory=list)       # escopo concreto por tier — seção de catálogo (vazio = sem seção)
 
 
 def prova_social_texto(v) -> str:

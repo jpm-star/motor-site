@@ -59,6 +59,8 @@ def briefing_de_cartucho(nome: str, base: str | None = None) -> dict:
         # cliente SEM esses campos gera igual a antes: fallback gracioso, não quebra).
         "ancora_preco": cart.get("ancora_preco") or {},
         "prova_social": cart.get("prova_social") or [],
+        "logo_svg": (cart.get("logo_svg") or "").strip(),   # logo de marca — nav + favicon (vazio = texto)
+        "catalogo": cart.get("catalogo") or [],              # escopo por tier (seção de catálogo)
     }
 
 
