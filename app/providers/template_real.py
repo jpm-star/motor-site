@@ -132,8 +132,8 @@ def _bloco_form(zap: str, nome_empresa: str) -> str:
   <p class="lead-sub">Deixe seu nome e telefone — o resto é rapidinho.</p>
   <form class="lead-form" onsubmit="return leadEnviar(event)">
     <div class="lead-row">
-      <input id="l-nome" required placeholder="Seu nome" autocomplete="name">
-      <input id="l-fone" required placeholder="Seu telefone (WhatsApp)" inputmode="tel" autocomplete="tel">
+      <input id="l-nome" required placeholder="Seu nome" aria-label="Seu nome" autocomplete="name">
+      <input id="l-fone" required placeholder="Seu telefone (WhatsApp)" aria-label="Seu telefone (WhatsApp)" inputmode="tel" autocomplete="tel">
     </div>
     <div id="l-mais" hidden>
       <textarea id="l-msg" rows="2" placeholder="O que você procura? (opcional)"></textarea>
@@ -460,7 +460,9 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .hero-orb.o2 {{ right:-70px; top:14%; animation-delay:-4.5s; opacity:.32; }}
 .hero > * {{ position:relative; z-index:1; }}
 @keyframes orb-float {{ 0%,100% {{ transform:translate(0,0) scale(1); }} 50% {{ transform:translate(32px,-26px) scale(1.13); }} }}
-.grid > .reveal, .cat-grid > * {{ transition-delay:calc(var(--i,0) * 80ms); }}
+.grid > .reveal, .cat-grid > * {{ transition-delay:calc(var(--i,0) * 90ms); }}
+.grid > .reveal {{ transform:translateX(-46px); }}  /* cards "Por que" entram deslizando esq→dir em cascata */
+.grid > .reveal.vis {{ transform:none; }}
 @media(prefers-reduced-motion:reduce) {{ .hero-orb {{ animation:none; }} .scroll-prog {{ display:none; }}
   .grid > .reveal, .cat-grid > * {{ transition-delay:0ms; }} }}
 {design.css_motion()}
