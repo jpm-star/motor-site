@@ -12,6 +12,7 @@ from .base import (
     GeradorSiteProvider,
     OrquestradorProvider,
     SiteGerado,
+    prova_social_texto,
 )
 
 _ANGULOS_PADRAO = ["diferenciacao", "publico_alvo", "prova_social"]
@@ -39,8 +40,9 @@ class StubOrquestrador(OrquestradorProvider):
         ]
         if briefing.get("publico", "").strip():
             secoes.append({"titulo": "Para quem atendemos", "corpo": briefing["publico"].strip()})
-        if briefing.get("prova_social", "").strip():
-            secoes.append({"titulo": "Prova social", "corpo": briefing["prova_social"].strip()})
+        _pv = prova_social_texto(briefing.get("prova_social"))  # list-safe (era .strip() e quebrava)
+        if _pv:
+            secoes.append({"titulo": "Prova social", "corpo": _pv})
         if not secoes:  # nada real veio → uma seção honesta, não placeholder
             secoes = [{"titulo": f"Sobre a {nome}",
                        "corpo": f"{nome} atua em {nicho} com atendimento próximo e entrega no prazo."}]
@@ -56,6 +58,8 @@ class StubOrquestrador(OrquestradorProvider):
             cor_primaria=briefing.get("cor_primaria"),
             cidade=briefing.get("cidade", "").strip(),
             servico_principal=briefing.get("servico_principal", "").strip(),
+            ancora_preco=briefing.get("ancora_preco") or {},   # padrões do Radar (vazio = sem seção)
+            antes_depois=briefing.get("prova_social") or [],
         )
 
 

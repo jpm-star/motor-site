@@ -189,6 +189,46 @@ def _bloco_calculadora(acento: str) -> str:
 </script>"""
 
 
+def _bloco_preco(ancora: dict) -> str:
+    """Seção ÂNCORA DE PREÇO (padrão do Radar). '' se o cartucho não trouxe (fallback
+    gracioso — cartucho de cliente sem `ancora_preco` gera igual a antes)."""
+    if not isinstance(ancora, dict) or not ancora:
+        return ""
+    cards = []
+    for tier in ancora.values():
+        if not isinstance(tier, dict):
+            continue
+        nome, preco, resumo = str(tier.get("nome", "")), str(tier.get("preco", "")), str(tier.get("resumo", ""))
+        if not (nome or preco):
+            continue
+        cards.append(f'<article class="preco-card"><h3>{_e(nome)}</h3>'
+                     f'<div class="preco-valor">{_e(preco)}</div><p>{_e(resumo)}</p></article>')
+    if not cards:
+        return ""
+    return ('<section class="preco reveal" id="planos"><h2 class="sec-titulo">Preço claro, sem orçamento demorado</h2>'
+            f'<div class="preco-grid">{"".join(cards)}</div></section>')
+
+
+def _bloco_antes_depois(itens: list) -> str:
+    """Seção ANTES/DEPOIS (padrão validado 4x no Radar). '' se vazio (gracioso). Aceita
+    itens {antes,depois} OU {quem,texto} OU string."""
+    if not isinstance(itens, list) or not itens:
+        return ""
+    linhas = []
+    for it in itens:
+        if isinstance(it, dict) and (it.get("antes") or it.get("depois")):
+            linhas.append(f'<div class="ad-par"><div class="ad-antes"><span>Antes</span><p>{_e(str(it.get("antes","")))}</p></div>'
+                          f'<div class="ad-depois"><span>Depois</span><p>{_e(str(it.get("depois","")))}</p></div></div>')
+        elif isinstance(it, dict) and it.get("texto"):
+            linhas.append(f'<blockquote class="ad-quote"><p>{_e(str(it["texto"]))}</p><cite>— {_e(str(it.get("quem","")))}</cite></blockquote>')
+        elif isinstance(it, str) and it.strip():
+            linhas.append(f'<blockquote class="ad-quote"><p>{_e(it.strip())}</p></blockquote>')
+    if not linhas:
+        return ""
+    return ('<section class="antes-depois reveal" id="antes-depois"><h2 class="sec-titulo">Antes e depois</h2>'
+            f'<div class="ad-grid">{"".join(linhas)}</div></section>')
+
+
 class GeradorTemplate(GeradorSiteProvider):
     name = "template"
 
@@ -212,6 +252,8 @@ class GeradorTemplate(GeradorSiteProvider):
         faq = _bloco_faq(getattr(t, "id", ""))  # universal (cai no genérico se o segmento não tiver)
         formulario = _bloco_form(zap, brief.nome_empresa)  # captura de lead → WhatsApp
         depoimentos = _bloco_depoimentos()  # exemplos rotativos, sempre marcados "exemplo"
+        preco = _bloco_preco(brief.ancora_preco)               # âncora de preço (Radar) — '' se cartucho não trouxe
+        antesdepois = _bloco_antes_depois(brief.antes_depois)  # antes/depois (Radar) — '' se ausente
         numerado = t.assinatura == "index"
         # seções do briefing + PISO de valor: se o briefing é pobre (<3 seções), o
         # template compensa com cards VERDADEIROS (nada inventado), pra nunca sair
@@ -343,6 +385,21 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .lead-form button {{ margin-top:1rem; width:100%; background:var(--acento); color:#fff; font-weight:700;
   border:0; padding:.95rem 2rem; border-radius:99px; font-size:1rem; font-family:"{t.fonte_titulo}",sans-serif;
   cursor:pointer; box-shadow:0 6px 18px -4px color-mix(in srgb,var(--acento) 55%,transparent); }}
+.preco {{ max-width:1000px; margin:3rem auto; padding:0 1.2rem; }}
+.preco-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; }}
+.preco-card {{ background:var(--acento-suave); border:1px solid var(--linha); border-radius:var(--radius); padding:1.6rem; text-align:center; }}
+.preco-card h3 {{ font-size:1rem; margin-bottom:.3rem; }}
+.preco-valor {{ font-size:1.7rem; font-weight:800; color:var(--acento); margin:.3rem 0; }}
+.preco-card p {{ font-size:.9rem; color:color-mix(in srgb,var(--ink) 65%,var(--bg)); }}
+.antes-depois {{ max-width:1000px; margin:3rem auto; padding:0 1.2rem; }}
+.ad-grid {{ display:grid; gap:1rem; }}
+.ad-par {{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }}
+.ad-antes, .ad-depois {{ background:var(--acento-suave); border-radius:var(--radius); padding:1.2rem; }}
+.ad-antes span, .ad-depois span {{ font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; opacity:.7; }}
+.ad-depois {{ border:2px solid var(--acento); }}
+.ad-quote {{ background:var(--acento-suave); border-radius:var(--radius); padding:1.4rem; font-size:1.05rem; }}
+.ad-quote cite {{ display:block; margin-top:.6rem; font-size:.85rem; opacity:.7; font-style:normal; }}
+@media(max-width:560px) {{ .ad-par {{ grid-template-columns:1fr; }} }}
 {design.css_motion()}
 </style>
 </head>
@@ -367,6 +424,8 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 {cards}
   </div>
 </main>
+{antesdepois}
+{preco}
 {calculadora}
 {depoimentos}
 {faq}

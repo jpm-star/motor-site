@@ -18,7 +18,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .base import AnguloAnalise, BriefingSite, OrquestradorProvider
+from .base import AnguloAnalise, BriefingSite, OrquestradorProvider, prova_social_texto
 
 _CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 _UA = "noemi-motor-site/1.0"   # WAF do Groq bloqueia o UA default do urllib (→403)
@@ -118,7 +118,7 @@ class LLMOrquestrador(OrquestradorProvider):
             "publico": briefing.get("publico", "").strip(),
             "cidade": briefing.get("cidade", "").strip(),
             "servico_principal": briefing.get("servico_principal", "").strip(),
-            "prova_social": briefing.get("prova_social", "").strip(),
+            "prova_social": prova_social_texto(briefing.get("prova_social")),  # list-safe
         }, ensure_ascii=False)
         dados = _groq_json(_SYS, f"Briefing do negócio:\n{contexto}", self.api_key)
         return BriefingSite(
@@ -133,6 +133,8 @@ class LLMOrquestrador(OrquestradorProvider):
             cor_primaria=briefing.get("cor_primaria"),
             cidade=briefing.get("cidade", "").strip(),
             servico_principal=briefing.get("servico_principal", "").strip(),
+            ancora_preco=briefing.get("ancora_preco") or {},   # padrões do Radar (vazio = sem seção)
+            antes_depois=briefing.get("prova_social") or [],
         )
 
 

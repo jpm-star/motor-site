@@ -55,6 +55,10 @@ def briefing_de_cartucho(nome: str, base: str | None = None) -> dict:
         "whatsapp": (cart.get("whatsapp_dono") or "").strip(),
         "diferenciais": itens,  # cada serviço vira uma seção honesta no site
         "publico": (cart.get("criterio_qualificado") or "").strip(),
+        # Padrões validados pelo Radar (só entram se o cartucho tiver — cartucho de
+        # cliente SEM esses campos gera igual a antes: fallback gracioso, não quebra).
+        "ancora_preco": cart.get("ancora_preco") or {},
+        "prova_social": cart.get("prova_social") or [],
     }
 
 

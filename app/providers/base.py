@@ -33,6 +33,17 @@ class BriefingSite:
     cor_primaria: str | None = None  # cor de marca (hex) — o gerador usa se vier
     cidade: str = ""            # 1ª região do cartucho — SEO local (title + JSON-LD)
     servico_principal: str = ""  # serviço-âncora do cartucho — CTA pré-preenchido
+    ancora_preco: dict = field(default_factory=dict)   # tiers de preço do cartucho — template renderiza SÓ se vier
+    antes_depois: list = field(default_factory=list)   # prova social antes/depois — idem (vazio = sem seção)
+
+
+def prova_social_texto(v) -> str:
+    """prova_social pode vir STRING ou LISTA de {quem,texto}. Devolve texto pro contexto
+    do LLM/stub sem quebrar (list.strip() explodia). '' se vazio."""
+    if isinstance(v, list):
+        return " · ".join(str(x.get("texto", "") if isinstance(x, dict) else x).strip()
+                          for x in v if x)
+    return str(v or "").strip()
 
 
 @dataclass
