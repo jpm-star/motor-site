@@ -446,15 +446,34 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .btn-glow {{ animation:glow-pulse 2.6s ease-in-out infinite; }}
 .btn-glow:hover {{ animation:none; }}
 @media(prefers-reduced-motion:reduce) {{ .btn-glow {{ animation:none; }} }}
+.scroll-prog {{ position:fixed; top:0; left:0; height:3px; width:0; z-index:100; pointer-events:none;
+  background:linear-gradient(90deg,var(--acento),color-mix(in srgb,var(--acento) 35%,#fff)); transition:width .12s linear; }}
+.nav {{ transition:background .32s ease, box-shadow .32s ease, backdrop-filter .32s ease; }}
+.nav.scrolled {{ background:color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter:blur(13px) saturate(1.25);
+  box-shadow:0 6px 26px -14px color-mix(in srgb,var(--ink) 46%,transparent); }}
+@supports ((-webkit-background-clip:text) or (background-clip:text)) {{
+  .hero h1 {{ background:linear-gradient(118deg,currentColor,color-mix(in srgb,var(--acento) 88%,currentColor));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }} }}
+.hero {{ position:relative; overflow:hidden; }}
+.hero-orb {{ position:absolute; width:340px; height:340px; border-radius:50%; filter:blur(72px); opacity:.5; z-index:0;
+  background:radial-gradient(circle,var(--acento),transparent 70%); pointer-events:none; animation:orb-float 9s ease-in-out infinite; }}
+.hero-orb.o2 {{ right:-70px; top:14%; animation-delay:-4.5s; opacity:.32; }}
+.hero > * {{ position:relative; z-index:1; }}
+@keyframes orb-float {{ 0%,100% {{ transform:translate(0,0) scale(1); }} 50% {{ transform:translate(32px,-26px) scale(1.13); }} }}
+.grid > .reveal, .cat-grid > * {{ transition-delay:calc(var(--i,0) * 80ms); }}
+@media(prefers-reduced-motion:reduce) {{ .hero-orb {{ animation:none; }} .scroll-prog {{ display:none; }}
+  .grid > .reveal, .cat-grid > * {{ transition-delay:0ms; }} }}
 {design.css_motion()}
 </style>
 </head>
 <body>
+<div class="scroll-prog"></div>
 <nav class="nav">
   {marca}
   <a href="{link}">{_e(brief.cta_texto)}</a>
 </nav>
 <header class="hero" id="topo">
+  <span class="hero-orb"></span><span class="hero-orb o2"></span>
   {'<div class="aurora"></div>' if t.hero_escuro else ''}
   {f'<span class="kicker load load-1">{kicker}</span>' if kicker else ''}
   <h1 class="load load-2">{_e(brief.headline)}</h1>
@@ -488,6 +507,21 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 </a>
 {design.js_reveal()}
 {design.js_interacoes()}
+<script>
+(function(){{
+  var bar=document.querySelector('.scroll-prog'), nav=document.querySelector('.nav');
+  function onScroll(){{
+    var h=document.documentElement, sc=h.scrollTop||document.body.scrollTop||0;
+    var max=(h.scrollHeight-h.clientHeight)||1;
+    if(bar) bar.style.width=(sc/max*100)+'%';
+    if(nav) nav.classList.toggle('scrolled', sc>40);
+  }}
+  document.addEventListener('scroll', onScroll, {{passive:true}}); onScroll();
+  document.querySelectorAll('.grid, .cat-grid').forEach(function(g){{
+    Array.prototype.forEach.call(g.children, function(c,i){{ c.style.setProperty('--i', i); }});
+  }});
+}})();
+</script>
 </body>
 </html>
 """
