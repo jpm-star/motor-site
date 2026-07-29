@@ -259,6 +259,148 @@ def _bloco_antes_depois(itens: list) -> str:
             f'<div class="ad-grid">{"".join(linhas)}</div></section>')
 
 
+# ── Catálogo-motion (TASK A): grid de serviços → detalhe com transição premium.
+# Vira a seção "Nossos serviços" do site gerado — MESMO padrão dos demos, agora
+# dinâmico por cliente. Serviços = típicos do segmento (o cliente edita depois);
+# NUNCA inventa preço (honestidade da base) — valor fica "no WhatsApp". Imagem
+# loremflickr temática + fallback picsum (nunca quebra). Estilo usa as vars do
+# tema (--acento/--superficie/...) pra casar com a paleta de cada segmento.
+_SERVICOS_MOTION = {
+    "odonto": [
+        ("Avaliação", "Consulta pra diagnóstico e plano de tratamento, sem compromisso.", "dentist,consultation"),
+        ("Limpeza e Profilaxia", "Remoção de placa e tártaro, polimento e orientação de higiene.", "dental,cleaning"),
+        ("Clareamento", "Clareamento profissional com acompanhamento — sorriso mais branco.", "teeth,whitening,smile"),
+        ("Implante", "Reposição de dente com implante fixo, aparência e mastigação naturais.", "dental,implant"),
+        ("Ortodontia", "Aparelho fixo ou alinhador transparente pra alinhar o sorriso.", "braces,orthodontics"),
+    ],
+    "estetica": [
+        ("Avaliação Estética", "Análise personalizada e plano de cuidados sob medida.", "beauty,consultation"),
+        ("Limpeza de Pele", "Limpeza profunda com extração e hidratação.", "facial,skincare"),
+        ("Botox / Toxina", "Suaviza linhas de expressão com naturalidade.", "beauty,face,treatment"),
+        ("Preenchimento", "Restaura volume e contorno do rosto com ácido hialurônico.", "aesthetics,skincare"),
+        ("Depilação a Laser", "Redução duradoura dos pelos com conforto.", "laser,beauty"),
+    ],
+    "fisio": [
+        ("Avaliação Fisioterapêutica", "Diagnóstico funcional e plano de tratamento individual.", "physiotherapy"),
+        ("Fisioterapia Ortopédica", "Recuperação de lesões, pós-cirúrgico e dores articulares.", "physiotherapy,rehab"),
+        ("RPG / Postural", "Reeducação postural que alivia dores nas costas.", "posture,stretching"),
+        ("Pilates Clínico", "Fortalecimento e mobilidade com acompanhamento profissional.", "pilates"),
+    ],
+    "salao": [
+        ("Corte", "Corte personalizado ao seu rosto e estilo, com finalização.", "haircut,salon"),
+        ("Coloração / Mechas", "Cor, luzes e mechas com brilho que dura.", "hair,color,salon"),
+        ("Tratamento / Hidratação", "Reconstrução e nutrição dos fios danificados.", "hair,treatment,spa"),
+        ("Manicure & Pedicure", "Unhas bem-feitas e duradouras, com capricho.", "manicure,nails"),
+    ],
+    "psico": [
+        ("Terapia Individual", "Espaço seguro pra cuidar da ansiedade, estresse e questões pessoais.", "therapy,counseling"),
+        ("Terapia de Casal", "Mediação pra melhorar a comunicação e a relação.", "couple,counseling"),
+        ("Atendimento Online", "Sessões por vídeo, com o mesmo acolhimento, de onde você estiver.", "online,therapy"),
+    ],
+    "_generico": [
+        ("Atendimento", "Atendimento próximo e sem enrolação, do jeito que você precisa.", "service,professional"),
+        ("Orçamento", "Chame no WhatsApp e receba os valores antes de fechar qualquer coisa.", "consultation,meeting"),
+        ("Acompanhamento", "A gente acompanha do início à entrega, no prazo combinado.", "support,office"),
+    ],
+}
+
+
+def _seg_motion(nicho: str) -> str:
+    n = (nicho or "").lower()
+    if any(k in n for k in ("odonto", "dent", "implant", "ortodont", "sorri")):
+        return "odonto"
+    if "fisio" in n:
+        return "fisio"
+    # salão ANTES de estética: "salão de beleza" não pode cair em estética por causa de "beleza"
+    if any(k in n for k in ("salão", "salao", "cabel", "hair", "manicure", "barbe")):
+        return "salao"
+    if any(k in n for k in ("estét", "estet", "harmoniz", "facial", "beleza", "botox", "derm")):
+        return "estetica"
+    if any(k in n for k in ("psico", "terap")):
+        return "psico"
+    return "_generico"
+
+
+def _bloco_catalogo_motion(nicho: str, zap: str) -> str:
+    """Seção 'Nossos serviços' com grid→detalhe (motion premium). Vazio nunca —
+    cai no genérico. Preço nunca inventado: CTA leva pro WhatsApp."""
+    servs = _SERVICOS_MOTION.get(_seg_motion(nicho), _SERVICOS_MOTION["_generico"])
+    cards, dados = [], []
+    for i, (nome, desc, kw) in enumerate(servs):
+        kwq = kw.replace(" ", ",")
+        prim = f"https://loremflickr.com/600/420/{kwq}?lock={i + 1}"
+        fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
+        big = f"https://loremflickr.com/900/620/{kwq}?lock={i + 1}"
+        wa = ("https://wa.me/" + zap + "?text=" + quote(f"Olá! Vim pelo site e quero agendar: {nome}.")) if zap else "#contato"
+        cards.append(
+            '<button class="sv-card reveal" data-i="' + str(i) + '" aria-label="Ver ' + _e(nome) + '">'
+            '<div class="sv-thumb"><img loading="lazy" src="' + prim + '" '
+            "onerror=\"this.onerror=null;this.src='" + fb + "'\" alt=\"" + _e(nome) + '"></div>'
+            '<div class="sv-cbody"><h3>' + _e(nome) + "</h3></div></button>"
+        )
+        dados.append({"nome": nome, "desc": desc, "img": big, "fb": fb, "wa": wa})
+    grid = ('<section class="servicos reveal" id="servicos"><h2 class="sec-titulo">Nossos serviços</h2>'
+            '<div class="sv-grid">' + "".join(cards) + "</div></section>")
+    overlay = (
+        '<div class="sv-detalhe" id="svDet" role="dialog" aria-modal="true">'
+        '<div class="sv-hero"><button class="sv-volta" id="svVolta" aria-label="Voltar">&larr;</button>'
+        '<img id="svImg" src="" alt=""></div>'
+        '<div class="sv-dbody"><h2 id="svNome"></h2><p id="svDesc"></p>'
+        '<div class="sv-ctas"><a class="sv-cta" id="svWa" href="#" target="_blank" rel="noopener">Agendar pelo WhatsApp</a></div>'
+        "</div></div>"
+    )
+    js = (
+        "<script>(function(){var D=" + json.dumps(dados, ensure_ascii=False) + ";"
+        "var det=document.getElementById('svDet'),volta=document.getElementById('svVolta');"
+        "function abrir(i){var s=D[i];var im=document.getElementById('svImg');"
+        "im.src=s.img;im.onerror=function(){this.onerror=null;this.src=s.fb};"
+        "document.getElementById('svNome').textContent=s.nome;"
+        "document.getElementById('svDesc').textContent=s.desc;"
+        "document.getElementById('svWa').href=s.wa;"
+        "det.classList.add('on');det.scrollTop=0;document.body.style.overflow='hidden';}"
+        "function fechar(){det.classList.remove('on');document.body.style.overflow='';}"
+        "document.querySelectorAll('.sv-card').forEach(function(c){c.onclick=function(){abrir(+c.dataset.i)}});"
+        "volta.onclick=fechar;document.addEventListener('keydown',function(e){if(e.key==='Escape')fechar()});"
+        "})();</script>"
+    )
+    return grid + overlay + js
+
+
+# CSS do catálogo-motion — usa as vars do tema (casa com a paleta de cada segmento).
+_MOTION_CSS = """
+.servicos{max-width:66rem;margin:3rem auto 0;padding:0 1.5rem}
+.sv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.1rem}
+.sv-card{border:1px solid var(--linha);background:var(--superficie);border-radius:var(--radius);overflow:hidden;
+  cursor:pointer;text-align:left;padding:0;font:inherit;color:inherit;
+  transition:transform .28s cubic-bezier(.16,1,.3,1),box-shadow .28s cubic-bezier(.16,1,.3,1)}
+.sv-card:hover{transform:translateY(-6px);box-shadow:0 16px 38px -14px color-mix(in srgb,var(--ink) 30%,transparent)}
+.sv-card:active{transform:translateY(-2px) scale(.99)}
+.sv-thumb{aspect-ratio:4/3;overflow:hidden;background:color-mix(in srgb,var(--ink) 8%,var(--bg))}
+.sv-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.16,1,.3,1)}
+.sv-card:hover .sv-thumb img{transform:scale(1.07)}
+.sv-cbody{padding:.9rem 1rem 1.1rem}
+.sv-cbody h3{font-size:1rem;font-weight:700;color:var(--ink)}
+.sv-detalhe{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  opacity:0;visibility:hidden;transform:translateY(20px) scale(.985);
+  transition:opacity .28s cubic-bezier(.16,1,.3,1),transform .28s cubic-bezier(.16,1,.3,1),visibility .28s}
+.sv-detalhe.on{opacity:1;visibility:visible;transform:none}
+.sv-hero{position:relative;aspect-ratio:16/10;max-height:54vh;overflow:hidden;background:color-mix(in srgb,var(--ink) 8%,var(--bg))}
+.sv-hero img{width:100%;height:100%;object-fit:cover}
+.sv-detalhe.on .sv-hero img{animation:svHeroIn .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes svHeroIn{from{transform:scale(1.08)}to{transform:scale(1)}}
+.sv-volta{position:absolute;top:16px;left:16px;width:44px;height:44px;border:0;border-radius:99px;cursor:pointer;
+  background:rgba(0,0,0,.45);color:#fff;font-size:1.35rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.sv-dbody{max-width:640px;margin:0 auto;padding:1.8rem 1.4rem 7rem}
+.sv-dbody h2{font-size:1.6rem;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.sv-dbody p{color:color-mix(in srgb,var(--ink) 78%,var(--bg));font-size:1.05rem;margin-top:.6rem}
+.sv-ctas{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;padding:14px 1.4rem 18px;
+  background:linear-gradient(transparent,var(--bg) 30%)}
+.sv-cta{display:block;text-align:center;padding:16px;border-radius:14px;font-weight:800;text-decoration:none;
+  background:#25d366;color:#053d24;box-shadow:0 6px 18px rgba(37,211,102,.3)}
+@media(prefers-reduced-motion:reduce){.sv-card,.sv-detalhe,.sv-detalhe.on .sv-hero img{transition:opacity .15s!important;animation:none!important}.sv-detalhe{transform:none}}
+"""
+
+
 class GeradorTemplate(GeradorSiteProvider):
     name = "template"
 
@@ -285,6 +427,7 @@ class GeradorTemplate(GeradorSiteProvider):
         preco = _bloco_preco(brief.ancora_preco, link)         # FAIXA de entrada + CTA (Radar) — '' se ausente
         antesdepois = _bloco_antes_depois(brief.antes_depois)  # antes/depois (Radar) — '' se ausente
         catalogo = _bloco_catalogo(brief.catalogo)             # escopo por tier — '' se cartucho não trouxe
+        catalogo_motion = _bloco_catalogo_motion(brief.nicho, zap)  # seção "Nossos serviços" grid→detalhe (motion premium)
         # Logo de marca (SVG do cartucho) na nav + favicon; sem logo → texto (regressão).
         marca = (f'<a href="#topo" class="marca" aria-label="{_e(brief.nome_empresa)}">{brief.logo_svg}</a>'
                  if brief.logo_svg else
@@ -476,6 +619,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 @media(prefers-reduced-motion:reduce) {{ .hero-orb {{ animation:none; }} .scroll-prog {{ display:none; }}
   .grid > .reveal, .cat-grid > * {{ transition-delay:0ms; }} }}
 {design.css_motion()}
+{_MOTION_CSS}
 </style>
 </head>
 <body>
@@ -501,6 +645,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 {cards}
   </div>
 </main>
+{catalogo_motion}
 {catalogo}
 {antesdepois}
 {preco}
