@@ -9,9 +9,13 @@ from __future__ import annotations
 
 import html
 import json
+import os
 from urllib.parse import quote
 
 from .. import design
+from ..seo import ga4 as seo_ga4
+from ..seo import schema as seo_schema
+from ..seo import sitemap as seo_sitemap
 from .base import BriefingSite, GeradorSiteProvider, SiteGerado
 
 
@@ -33,25 +37,31 @@ def _titulo_pagina(nome: str, nicho: str, cidade: str = "") -> str:
     return f"{nome} — {nicho}" if nicho else nome
 
 
-def _json_ld_local(brief) -> str:
-    """JSON-LD schema.org/LocalBusiness preenchido do cartucho — só campos reais
-    (nada inventado). Ajuda o Google a mostrar o negócio na busca/mapa local."""
-    dados = {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": brief.nome_empresa,
-        "description": brief.subheadline,
-    }
-    if brief.nicho:
-        dados["knowsAbout"] = brief.nicho
-    if getattr(brief, "cidade", ""):
-        dados["areaServed"] = brief.cidade
-        dados["address"] = {"@type": "PostalAddress", "addressLocality": brief.cidade}
+def _negocio_seo(brief, t_id: str) -> dict:
+    """Adapter BriefingSite → dict do módulo seo/. Tira o FAQ do mesmo _FAQ que a
+    seção visível usa (schema e página contam a MESMA história)."""
     zap = _so_digitos(brief.cta_contato)
-    if zap:
-        dados["telephone"] = f"+{zap}"
-    corpo = json.dumps(dados, ensure_ascii=False)
-    return f'<script type="application/ld+json">{corpo}</script>'
+    faq = _FAQ.get(t_id) or _FAQ["_generico"]
+    return {
+        "nome": brief.nome_empresa,
+        "nicho": brief.nicho,
+        "cidade": getattr(brief, "cidade", ""),
+        "whatsapp": f"+{zap}" if zap else "",
+        "url": os.environ.get("SITE_URL", "").rstrip("/"),
+        "servicos": [s for s in [getattr(brief, "servico_principal", "")] if s],
+        "faq": [{"q": q, "a": a} for q, a in faq],
+    }
+
+
+def _seo_head(brief, t_id: str) -> str:
+    """Bloco Tier 2 pro <head>: JSON-LD @graph (LocalBusiness+Organization+FAQPage,
+    via seo/schema — supersede o LocalBusiness antigo, UM só JSON-LD) + GA4 (inerte
+    sem GA4_MEASUREMENT_ID)."""
+    neg = _negocio_seo(brief, t_id)
+    return "\n".join(b for b in (
+        seo_schema.json_ld(neg),
+        seo_ga4.gtag_snippet(os.environ.get("GA4_MEASUREMENT_ID", "")),
+    ) if b)
 
 
 # FAQ por segmento (build-time): perguntas reais que o cliente faz antes de chamar.
@@ -319,7 +329,7 @@ class GeradorTemplate(GeradorSiteProvider):
 <meta property="og:title" content="{_e(brief.nome_empresa)}">
 <meta property="og:description" content="{_e(brief.subheadline)}">
 <meta property="og:type" content="website">
-{_json_ld_local(brief)}
+{_seo_head(brief, getattr(t, "id", ""))}
 <link rel="icon" href="{favicon}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -527,4 +537,11 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 </body>
 </html>
 """
-        return SiteGerado(arquivos={"index.html": html_doc}, slug=slug)
+        # Tier 2 técnico: robots.txt sempre; sitemap.xml só com SITE_URL (sem domínio
+        # não dá pra emitir <loc> absoluto válido — não inventa URL falsa).
+        base = os.environ.get("SITE_URL", "").rstrip("/")
+        arquivos = {"index.html": html_doc,
+                    "robots.txt": seo_sitemap.robots_txt(f"{base}/sitemap.xml" if base else "/sitemap.xml")}
+        if base:
+            arquivos["sitemap.xml"] = seo_sitemap.sitemap_xml([f"{base}/"])
+        return SiteGerado(arquivos=arquivos, slug=slug)
