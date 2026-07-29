@@ -67,7 +67,8 @@ def render(demo: dict) -> str:
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(nome)}</title>
 <style>
-:root{{--c:{cor};--c2:{cor2};--ink:#12141a;--mut:#6b7280;--bg:#f7f8fa;--card:#fff;--line:#eceef2}}
+:root{{--c:{cor};--c2:{cor2};--ink:#12141a;--mut:#6b7280;--bg:#f7f8fa;--card:#fff;--line:#eceef2;
+  --e:cubic-bezier(.16,1,.3,1);--d:.28s}}  /* easing expo + duração list->detalhe (250-300ms band) */
 *{{box-sizing:border-box;margin:0}}
 body{{font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}}
 header{{position:sticky;top:0;z-index:5;background:linear-gradient(120deg,var(--c),var(--c2));color:#fff;
@@ -80,33 +81,50 @@ header .tl{{font-size:.74rem;opacity:.9;font-weight:500}}
 .lead{{color:var(--mut);font-size:.92rem;margin:6px 2px 20px}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}}
 .card{{border:1px solid var(--line);background:var(--card);border-radius:16px;overflow:hidden;cursor:pointer;
-  text-align:left;padding:0;font:inherit;color:inherit;transition:transform .18s,box-shadow .18s}}
-.card:hover{{transform:translateY(-4px);box-shadow:0 10px 26px rgba(0,0,0,.10)}}
+  text-align:left;padding:0;font:inherit;color:inherit;
+  transition:transform var(--d) var(--e),box-shadow var(--d) var(--e)}}
+.card:hover{{transform:translateY(-5px);box-shadow:0 14px 34px rgba(0,0,0,.13)}}
+.card:active{{transform:translateY(-2px) scale(.99)}}
 .thumb{{aspect-ratio:4/3;overflow:hidden;background:#e5e7eb}}
-.thumb img{{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}}
-.card:hover .thumb img{{transform:scale(1.06)}}
-.cbody{{padding:11px 13px 14px}}.cbody h3{{font-size:.98rem;font-weight:700}}
-.preco{{display:inline-block;margin-top:5px;color:var(--c2);font-weight:800;font-size:.9rem}}
-/* detalhe */
-.detalhe{{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;
-  opacity:0;visibility:hidden;transform:translateY(14px);transition:opacity .28s,transform .28s,visibility .28s}}
+.thumb img{{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s var(--e)}}
+.card:hover .thumb img{{transform:scale(1.07)}}
+.cbody{{padding:12px 14px 15px}}.cbody h3{{font-size:1rem;font-weight:700;letter-spacing:-.01em}}
+.preco{{display:inline-block;margin-top:6px;color:var(--c2);font-weight:800;font-size:.9rem;letter-spacing:.01em}}
+/* detalhe — transição list->detalhe: fade + rise + settle-scale (ease-out expo) */
+.detalhe{{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  opacity:0;visibility:hidden;transform:translateY(20px) scale(.985);
+  transition:opacity var(--d) var(--e),transform var(--d) var(--e),visibility var(--d)}}
 .detalhe.on{{opacity:1;visibility:visible;transform:none}}
-.dhero{{position:relative;aspect-ratio:16/10;max-height:52vh;overflow:hidden;background:#e5e7eb}}
+.dhero{{position:relative;aspect-ratio:16/10;max-height:54vh;overflow:hidden;background:#e5e7eb}}
+.dhero::after{{content:"";position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(0,0,0,.28))}}
 .dhero img{{width:100%;height:100%;object-fit:cover}}
-.voltar{{position:absolute;top:14px;left:14px;background:rgba(0,0,0,.5);color:#fff;border:0;border-radius:999px;
-  width:42px;height:42px;font-size:1.3rem;cursor:pointer;backdrop-filter:blur(4px)}}
-.dbody{{max-width:680px;margin:0 auto;padding:22px 18px 40px}}
-.dbody h2{{font-size:1.5rem;font-weight:800}}
-.dprice{{color:var(--c2);font-weight:800;font-size:1.25rem;margin:8px 0 14px}}
-.dbody p{{color:#374151;font-size:1.02rem}}
-.ctas{{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;position:sticky;bottom:0;
-  background:linear-gradient(transparent,var(--bg) 22%);padding-top:18px}}
-.cta{{flex:1;min-width:150px;text-align:center;padding:15px;border-radius:14px;font-weight:800;
-  text-decoration:none;font-size:1rem}}
-.cta.wa{{background:#25d366;color:#063}}.cta.ag{{background:var(--c);color:#fff}}
+.detalhe.on .dhero img{{animation:heroIn .7s var(--e) both}}  /* shared-element: imagem assenta com leve zoom-out */
+@keyframes heroIn{{from{{transform:scale(1.08)}}to{{transform:scale(1)}}}}
+.voltar{{position:absolute;top:16px;left:16px;background:rgba(0,0,0,.42);color:#fff;border:0;border-radius:999px;
+  width:44px;height:44px;font-size:1.35rem;cursor:pointer;backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;transition:background .2s}}
+.voltar:hover{{background:rgba(0,0,0,.62)}}
+.dbody{{max-width:680px;margin:0 auto;padding:26px 20px 120px;animation:bodyIn .5s var(--e) .06s both}}
+@keyframes bodyIn{{from{{opacity:0;transform:translateY(10px)}}to{{opacity:1;transform:none}}}}
+.dbody h2{{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;line-height:1.15}}
+.dprice{{color:var(--c2);font-weight:800;font-size:1.35rem;margin:10px 0 16px;letter-spacing:-.01em}}
+.dbody p{{color:#374151;font-size:1.05rem;line-height:1.6}}
+.ctas{{display:flex;gap:11px;flex-wrap:wrap;position:fixed;left:0;right:0;bottom:0;z-index:2;
+  max-width:680px;margin:0 auto;padding:14px 20px 18px;
+  background:linear-gradient(transparent,var(--bg) 30%)}}
+.cta{{flex:1;min-width:150px;text-align:center;padding:16px;border-radius:14px;font-weight:800;
+  text-decoration:none;font-size:1.02rem;transition:transform .18s var(--e),filter .18s}}
+.cta:active{{transform:scale(.97)}}
+.cta.wa{{background:#25d366;color:#053d24;box-shadow:0 6px 18px rgba(37,211,102,.32)}}
+.cta.wa:hover{{filter:brightness(1.04)}}
+.cta.ag{{background:var(--c);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.16)}}
 .badge{{display:inline-block;background:#eef2f7;color:var(--mut);font-size:.7rem;font-weight:700;
-  padding:4px 9px;border-radius:999px;margin-bottom:10px;letter-spacing:.04em}}
+  padding:5px 10px;border-radius:999px;margin-bottom:12px;letter-spacing:.06em}}
 footer{{text-align:center;color:var(--mut);font-size:.75rem;padding:24px}}
+@media (prefers-reduced-motion:reduce){{
+  *,.detalhe,.detalhe.on .dhero img,.dbody{{animation:none!important;transition:opacity .15s!important}}
+  .detalhe{{transform:none}}
+}}
 </style></head><body>
 <header>
   <div><h1>{html.escape(nome)}</h1><div class="tl">{html.escape(tagline)}</div></div>
