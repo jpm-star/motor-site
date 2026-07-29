@@ -52,3 +52,20 @@ estetica,fisio,salao,psico}-motor/`. Preço nunca inventado — CTA de serviço 
 **Pendente:** restart do serviço `noemi-site-builder` (:8020) pra o studio no ar servir o código
 novo (o já-gerado em `/var/www/sites` já reflete). Os `demo-*-motion` estáticos antigos seguem
 no ar pra comparação até o JP decidir aposentá-los.
+
+### Motion é DEFAULT DE FÁBRICA (não flag)
+`_bloco_catalogo_motion` + `_MOTION_CSS` são chamados INCONDICIONALMENTE no `GeradorTemplate.gerar`
+— não há flag/env pra escolher entre "motion premium" e "versão simples"; a versão simples não
+existe. O único env é `SITE_GERADOR` (stub vs template), que o `/studio` (`builder_web.py`) já
+fixa em `template` via `setdefault`. (O default cru do pipeline em `config.py` segue `stub`
+DE PROPÓSITO — é o que os 37 testes usam; não mexer, não afeta o caminho do studio.)
+Nicho fora dos 5 mapeados → fallback `_generico`, MESMO padrão visual, nunca regride/quebra
+(verificado: petshop/advocacia/mecânica/vazio → 3 cards + overlay).
+
+### ⚠️ As 5 demos-motor SÃO a referência de VENDA — NÃO sobrescrever sem confirmação do JP
+`/var/www/sites/demo-{odonto,estetica,fisio,salao,psico}-motor/` são o padrão de referência
+visual/estrutural do motor E a base que o JP edita à mão (nome/whatsapp/diferenciais por lead)
+pra apresentar em call. **NÃO regenerar/apagar esses 5 slugs sem o JP confirmar.**
+Seguro por padrão: o studio gera cada lead novo num slug NOVO (derivado de `nome_empresa` via
+`_slug`), então não toca esses 5 — as edições manuais do JP só correm risco se alguém regenerar
+exatamente esses slugs.
