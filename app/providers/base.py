@@ -37,6 +37,7 @@ class BriefingSite:
     antes_depois: list = field(default_factory=list)   # prova social antes/depois — idem (vazio = sem seção)
     logo_svg: str = ""                                 # logo de marca (SVG inline) — nav + favicon (vazio = texto)
     catalogo: list = field(default_factory=list)       # escopo concreto por tier — seção de catálogo (vazio = sem seção)
+    produtos: list = field(default_factory=list)       # catálogo de PRODUTO (e-commerce/vitrine): [{nome,preco,desc,img}] — vazio = site de serviço (comportamento clínica intocado)
 
 
 def prova_social_texto(v) -> str:

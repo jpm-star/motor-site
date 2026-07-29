@@ -131,6 +131,7 @@ class LLMOrquestrador(OrquestradorProvider):
             cta_contato=briefing.get("whatsapp", "(a combinar)"),
             angulos_usados=angulos,
             cor_primaria=briefing.get("cor_primaria"),
+            produtos=briefing.get("produtos") or [],
             cidade=briefing.get("cidade", "").strip(),
             servico_principal=briefing.get("servico_principal", "").strip(),
             ancora_preco=briefing.get("ancora_preco") or {},   # padrões do Radar (vazio = sem seção)

@@ -62,6 +62,7 @@ class StubOrquestrador(OrquestradorProvider):
             antes_depois=briefing.get("prova_social") or [],
             logo_svg=briefing.get("logo_svg", ""),
             catalogo=briefing.get("catalogo") or [],
+            produtos=briefing.get("produtos") or [],
         )
 
 

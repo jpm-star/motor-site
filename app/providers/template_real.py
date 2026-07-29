@@ -321,32 +321,46 @@ def _seg_motion(nicho: str) -> str:
     return "_generico"
 
 
-def _bloco_catalogo_motion(nicho: str, zap: str) -> str:
-    """Seção 'Nossos serviços' com grid→detalhe (motion premium). Vazio nunca —
-    cai no genérico. Preço nunca inventado: CTA leva pro WhatsApp."""
-    servs = _SERVICOS_MOTION.get(_seg_motion(nicho), _SERVICOS_MOTION["_generico"])
+def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None) -> str:
+    """Grid→detalhe (motion premium). MODO SERVIÇO (default, clínica): `_SERVICOS_MOTION`
+    por nicho, sem preço. MODO PRODUTO (quando `produtos` vem do cartucho — e-commerce/
+    vitrine): mostra preço + CTA 'Comprar pelo WhatsApp'. Aditivo: sem `produtos`, é
+    exatamente o comportamento de serviço de antes."""
+    modo_produto = bool(produtos)
+    if modo_produto:
+        titulo, verbo = "Nossos produtos", "quero comprar"
+        itens = [(str(p.get("nome", "")).strip(), str(p.get("desc", "")).strip(),
+                  (str(p.get("img", "")).strip() or "product"), str(p.get("preco", "")).strip())
+                 for p in produtos if str(p.get("nome", "")).strip()]
+    else:
+        titulo, verbo = "Nossos serviços", "quero agendar"
+        servs = _SERVICOS_MOTION.get(_seg_motion(nicho), _SERVICOS_MOTION["_generico"])
+        itens = [(nome, desc, kw, "") for (nome, desc, kw) in servs]
     cards, dados = [], []
-    for i, (nome, desc, kw) in enumerate(servs):
+    for i, (nome, desc, kw, preco) in enumerate(itens):
         kwq = kw.replace(" ", ",")
         prim = f"https://loremflickr.com/600/420/{kwq}?lock={i + 1}"
         fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
         big = f"https://loremflickr.com/900/620/{kwq}?lock={i + 1}"
-        wa = ("https://wa.me/" + zap + "?text=" + quote(f"Olá! Vim pelo site e quero agendar: {nome}.")) if zap else "#contato"
+        msg = f"Olá! Vim pelo site e {verbo}: {nome}" + (f" ({preco})" if preco else "") + "."
+        wa = ("https://wa.me/" + zap + "?text=" + quote(msg)) if zap else "#contato"
+        preco_card = ('<span class="sv-preco">' + _e(preco) + "</span>") if preco else ""
         cards.append(
             '<button class="sv-card reveal" data-i="' + str(i) + '" aria-label="Ver ' + _e(nome) + '">'
             '<div class="sv-thumb"><img loading="lazy" src="' + prim + '" '
             "onerror=\"this.onerror=null;this.src='" + fb + "'\" alt=\"" + _e(nome) + '"></div>'
-            '<div class="sv-cbody"><h3>' + _e(nome) + "</h3></div></button>"
+            '<div class="sv-cbody"><h3>' + _e(nome) + "</h3>" + preco_card + "</div></button>"
         )
-        dados.append({"nome": nome, "desc": desc, "img": big, "fb": fb, "wa": wa})
-    grid = ('<section class="servicos reveal" id="servicos"><h2 class="sec-titulo">Nossos serviços</h2>'
+        dados.append({"nome": nome, "desc": desc, "img": big, "fb": fb, "wa": wa, "preco": preco})
+    grid = ('<section class="servicos reveal" id="servicos"><h2 class="sec-titulo">' + titulo + "</h2>"
             '<div class="sv-grid">' + "".join(cards) + "</div></section>")
+    cta_label = "Comprar pelo WhatsApp" if modo_produto else "Agendar pelo WhatsApp"
     overlay = (
         '<div class="sv-detalhe" id="svDet" role="dialog" aria-modal="true">'
         '<div class="sv-hero"><button class="sv-volta" id="svVolta" aria-label="Voltar">&larr;</button>'
         '<img id="svImg" src="" alt=""></div>'
-        '<div class="sv-dbody"><h2 id="svNome"></h2><p id="svDesc"></p>'
-        '<div class="sv-ctas"><a class="sv-cta" id="svWa" href="#" target="_blank" rel="noopener">Agendar pelo WhatsApp</a></div>'
+        '<div class="sv-dbody"><h2 id="svNome"></h2><div class="sv-dprice" id="svPreco"></div><p id="svDesc"></p>'
+        '<div class="sv-ctas"><a class="sv-cta" id="svWa" href="#" target="_blank" rel="noopener">' + cta_label + "</a></div>"
         "</div></div>"
     )
     js = (
@@ -355,6 +369,7 @@ def _bloco_catalogo_motion(nicho: str, zap: str) -> str:
         "function abrir(i){var s=D[i];var im=document.getElementById('svImg');"
         "im.src=s.img;im.onerror=function(){this.onerror=null;this.src=s.fb};"
         "document.getElementById('svNome').textContent=s.nome;"
+        "document.getElementById('svPreco').textContent=s.preco||'';"
         "document.getElementById('svDesc').textContent=s.desc;"
         "document.getElementById('svWa').href=s.wa;"
         "det.classList.add('on');det.scrollTop=0;document.body.style.overflow='hidden';}"
@@ -380,6 +395,9 @@ _MOTION_CSS = """
 .sv-card:hover .sv-thumb img{transform:scale(1.07)}
 .sv-cbody{padding:.9rem 1rem 1.1rem}
 .sv-cbody h3{font-size:1rem;font-weight:700;color:var(--ink)}
+.sv-preco{display:inline-block;margin-top:5px;color:var(--acento);font-weight:800;font-size:.95rem;letter-spacing:.01em}
+.sv-dprice{color:var(--acento);font-weight:800;font-size:1.4rem;margin:.5rem 0 .2rem}
+.sv-dprice:empty{display:none}
 .sv-detalhe{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
   opacity:0;visibility:hidden;transform:translateY(20px) scale(.985);
   transition:opacity .28s cubic-bezier(.16,1,.3,1),transform .28s cubic-bezier(.16,1,.3,1),visibility .28s}
@@ -427,7 +445,7 @@ class GeradorTemplate(GeradorSiteProvider):
         preco = _bloco_preco(brief.ancora_preco, link)         # FAIXA de entrada + CTA (Radar) — '' se ausente
         antesdepois = _bloco_antes_depois(brief.antes_depois)  # antes/depois (Radar) — '' se ausente
         catalogo = _bloco_catalogo(brief.catalogo)             # escopo por tier — '' se cartucho não trouxe
-        catalogo_motion = _bloco_catalogo_motion(brief.nicho, zap)  # seção "Nossos serviços" grid→detalhe (motion premium)
+        catalogo_motion = _bloco_catalogo_motion(brief.nicho, zap, getattr(brief, "produtos", None))  # serviço (clínica) OU produto (e-commerce) se cartucho trouxer `produtos`
         # Logo de marca (SVG do cartucho) na nav + favicon; sem logo → texto (regressão).
         marca = (f'<a href="#topo" class="marca" aria-label="{_e(brief.nome_empresa)}">{brief.logo_svg}</a>'
                  if brief.logo_svg else
