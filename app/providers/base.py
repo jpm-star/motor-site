@@ -38,6 +38,10 @@ class BriefingSite:
     logo_svg: str = ""                                 # logo de marca (SVG inline) — nav + favicon (vazio = texto)
     catalogo: list = field(default_factory=list)       # escopo concreto por tier — seção de catálogo (vazio = sem seção)
     produtos: list = field(default_factory=list)       # catálogo de PRODUTO (e-commerce/vitrine): [{nome,preco,desc,img}] — vazio = site de serviço (comportamento clínica intocado)
+    # === Assets/copy do CLIENTE (opcionais, PROMPT 2) — vazio = comportamento de hoje ===
+    hero_imagem: str = ""   # caminho RELATIVO da foto de hero (ex: "img/hero.jpg") — vazio = gradiente CSS de hoje
+    hero_video: str = ""    # caminho RELATIVO do vídeo de hero (ex: "vid/hero.mp4") — vazio = sem <video> (só CSS motion)
+    copy_livre: str = ""    # copy PRONTA do cliente — sobrescreve as seções geradas por IA (vazio = copy do LLM)
 
 
 def prova_social_texto(v) -> str:

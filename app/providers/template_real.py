@@ -480,6 +480,22 @@ class GeradorTemplate(GeradorSiteProvider):
         )
         kicker = _e(brief.nicho).upper() if brief.nicho else ""
 
+        # === PROMPT 2: assets/copy do CLIENTE (opcionais). Vazio = comportamento de hoje. ===
+        _hv, _hi = _e(brief.hero_video), _e(brief.hero_imagem)
+        if brief.hero_video:  # vídeo do cliente = <video> REAL embutido (sem Higgsfield/render)
+            _poster = f' poster="{_hi}"' if brief.hero_imagem else ""
+            hero_media = (f'<video class="hero-media" autoplay muted loop playsinline '
+                          f'preload="metadata"{_poster}><source src="{_hv}"></video>')
+        elif brief.hero_imagem:  # foto do cliente = <img> de hero real
+            hero_media = f'<img class="hero-media" src="{_hi}" alt="" loading="eager">'
+        else:
+            hero_media = ""
+        sec_titulo = f"Por que a {_e(brief.nome_empresa)}"
+        if brief.copy_livre:  # copy PRONTA do cliente sobrescreve as seções geradas por IA
+            _paras = [p.strip() for p in brief.copy_livre.splitlines() if p.strip()]
+            cards = "\n".join(f'<article class="card reveal"><p>{_e(p)}</p></article>' for p in _paras) or cards
+            sec_titulo = f"Sobre a {_e(brief.nome_empresa)}"
+
         html_doc = f"""<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -630,6 +646,9 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   background:radial-gradient(circle,var(--acento),transparent 70%); pointer-events:none; animation:orb-float 9s ease-in-out infinite; }}
 .hero-orb.o2 {{ right:-70px; top:14%; animation-delay:-4.5s; opacity:.32; }}
 .hero > * {{ position:relative; z-index:1; }}
+/* PROMPT 2: foto/vídeo de hero do cliente (atrás do texto). opacity é knob de leitura. */
+.hero > .hero-media {{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  z-index:0; opacity:.5; pointer-events:none; }}
 @keyframes orb-float {{ 0%,100% {{ transform:translate(0,0) scale(1); }} 50% {{ transform:translate(32px,-26px) scale(1.13); }} }}
 .grid > .reveal, .cat-grid > * {{ transition-delay:calc(var(--i,0) * 90ms); }}
 .grid > .reveal {{ transform:translateX(-46px); }}  /* cards "Por que" entram deslizando esq→dir em cascata */
@@ -647,6 +666,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   <a href="{link}">{_e(brief.cta_texto)}</a>
 </nav>
 <header class="hero" id="topo">
+  {hero_media}
   <span class="hero-orb"></span><span class="hero-orb o2"></span>
   {'<div class="aurora"></div>' if t.hero_escuro else ''}
   {f'<span class="kicker load load-1">{kicker}</span>' if kicker else ''}
@@ -658,7 +678,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
                  'Resposta rápida no WhatsApp', 'Orçamento sem compromisso'] if x)}</div>
 </header>
 <main>
-  <h2 class="sec-titulo reveal">Por que a {_e(brief.nome_empresa)}</h2>
+  <h2 class="sec-titulo reveal">{sec_titulo}</h2>
   <div class="grid">
 {cards}
   </div>

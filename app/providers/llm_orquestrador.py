@@ -138,6 +138,10 @@ class LLMOrquestrador(OrquestradorProvider):
             antes_depois=briefing.get("prova_social") or [],
             logo_svg=briefing.get("logo_svg", ""),
             catalogo=briefing.get("catalogo") or [],
+            # assets/copy do cliente (PROMPT 2) — passam direto pro gerador (vazio = fallback de hoje)
+            hero_imagem=briefing.get("hero_imagem", ""),
+            hero_video=briefing.get("hero_video", ""),
+            copy_livre=briefing.get("copy_livre", ""),
         )
 
 
