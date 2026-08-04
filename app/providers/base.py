@@ -42,6 +42,13 @@ class BriefingSite:
     hero_imagem: str = ""   # caminho RELATIVO da foto de hero (ex: "img/hero.jpg") — vazio = gradiente CSS de hoje
     hero_video: str = ""    # caminho RELATIVO do vídeo de hero (ex: "vid/hero.mp4") — vazio = sem <video> (só CSS motion)
     copy_livre: str = ""    # copy PRONTA do cliente — sobrescreve as seções geradas por IA (vazio = copy do LLM)
+    # === ESTRUTURA variável (receita) — vazio = ordem default de sempre ===
+    # Sem isto TODO site sai com a mesma ordem de seções (só a pele mudava). A receita é
+    # a ORDEM dos blocos; bloco que tem conteúdo mas a receita não cita vai pro fim, pra
+    # nada sumir. Nomes: sobre, catalogo_motion, catalogo, antesdepois, preco,
+    # calculadora, depoimentos, faq, formulario.
+    receita_ordem: list = field(default_factory=list)
+    receita_hero: str = ""  # "video"|"foto"|"texto" — preferência; "texto" suprime a mídia do hero
 
 
 def prova_social_texto(v) -> str:

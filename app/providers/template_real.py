@@ -482,11 +482,16 @@ class GeradorTemplate(GeradorSiteProvider):
 
         # === PROMPT 2: assets/copy do CLIENTE (opcionais). Vazio = comportamento de hoje. ===
         _hv, _hi = _e(brief.hero_video), _e(brief.hero_imagem)
-        if brief.hero_video:  # vídeo do cliente = <video> REAL embutido (sem Higgsfield/render)
-            _poster = f' poster="{_hi}"' if brief.hero_imagem else ""
+        _rh = (getattr(brief, "receita_hero", "") or "").strip().lower()
+        if _rh == "texto":  # receita pede hero tipográfico: ignora mídia mesmo se houver
+            _hv = _hi = ""
+        elif _rh == "foto":  # receita prefere foto parada mesmo com vídeo disponível
+            _hv = ""
+        if _hv:  # vídeo do cliente = <video> REAL embutido (sem Higgsfield/render)
+            _poster = f' poster="{_hi}"' if _hi else ""
             hero_media = (f'<video class="hero-media" autoplay muted loop playsinline '
                           f'preload="metadata"{_poster}><source src="{_hv}"></video>')
-        elif brief.hero_imagem:  # foto do cliente = <img> de hero real
+        elif _hi:  # foto do cliente = <img> de hero real
             hero_media = f'<img class="hero-media" src="{_hi}" alt="" loading="eager">'
         else:
             hero_media = ""
@@ -495,6 +500,21 @@ class GeradorTemplate(GeradorSiteProvider):
             _paras = [p.strip() for p in brief.copy_livre.splitlines() if p.strip()]
             cards = "\n".join(f'<article class="card reveal"><p>{_e(p)}</p></article>' for p in _paras) or cards
             sec_titulo = f"Sobre a {_e(brief.nome_empresa)}"
+
+        # === ESTRUTURA VARIÁVEL (receita) ===
+        # A ordem das seções era um literal aqui — por isso TODO site saía igual, mudando
+        # só a pele. Agora vem de `brief.receita_ordem`. Regra de segurança: bloco que TEM
+        # conteúdo e a receita não cita vai pro fim — receita errada nunca apaga seção paga.
+        sobre = (f'<main>\n  <h2 class="sec-titulo reveal">{sec_titulo}</h2>\n'
+                 f'  <div class="grid">\n{cards}\n  </div>\n</main>')
+        blocos = {"sobre": sobre, "catalogo_motion": catalogo_motion, "catalogo": catalogo,
+                  "antesdepois": antesdepois, "preco": preco, "calculadora": calculadora,
+                  "depoimentos": depoimentos, "faq": faq, "formulario": formulario}
+        _DEFAULT = ["sobre", "catalogo_motion", "catalogo", "antesdepois", "preco",
+                    "calculadora", "depoimentos", "faq", "formulario"]
+        ordem = [k for k in (getattr(brief, "receita_ordem", None) or _DEFAULT) if k in blocos]
+        ordem += [k for k in _DEFAULT if k not in ordem]  # sobra com conteúdo nunca some
+        corpo = "\n".join(b for k in ordem if (b := blocos[k]))
 
         html_doc = f"""<!doctype html>
 <html lang="pt-BR">
@@ -677,20 +697,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
      x for x in [f'Atende {_e(brief.cidade)}' if getattr(brief,'cidade','') else '',
                  'Resposta rápida no WhatsApp', 'Orçamento sem compromisso'] if x)}</div>
 </header>
-<main>
-  <h2 class="sec-titulo reveal">{sec_titulo}</h2>
-  <div class="grid">
-{cards}
-  </div>
-</main>
-{catalogo_motion}
-{catalogo}
-{antesdepois}
-{preco}
-{calculadora}
-{depoimentos}
-{faq}
-{formulario}
+{corpo}
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
 <section class="cta-final reveal" id="contato">
   <h2>Pronto pra começar?</h2>

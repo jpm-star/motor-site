@@ -142,6 +142,9 @@ class LLMOrquestrador(OrquestradorProvider):
             hero_imagem=briefing.get("hero_imagem", ""),
             hero_video=briefing.get("hero_video", ""),
             copy_livre=briefing.get("copy_livre", ""),
+            # estrutura variável: ordem das seções vem do briefing (vazio = default de sempre)
+            receita_ordem=briefing.get("receita_ordem") or [],
+            receita_hero=briefing.get("receita_hero", ""),
         )
 
 
