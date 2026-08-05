@@ -51,22 +51,57 @@ def _chave() -> str:
     return ""
 
 
-def _groq_json(prompt_sys: str, prompt_user: str, chave: str, temperatura: float = 0.6) -> dict:
-    """1 chamada chat JSON-mode. Levanta RuntimeError em falha de rede (falha-alto)."""
+_GATEWAY_URL = os.environ.get("LITELLM_BASE", "http://127.0.0.1:4000") + "/v1/chat/completions"
+_GATEWAY_MODEL = os.environ.get("SITE_LLM_MODEL", "analise")
+
+
+def _chamar(url: str, autorizacao: str, modelo: str, prompt_sys: str,
+            prompt_user: str, temperatura: float) -> dict:
+    """1 chamada chat JSON-mode. Deixa a exceção subir — quem chama decide o fallback."""
     body = json.dumps({
-        "model": _MODEL, "temperature": temperatura,
+        "model": modelo, "temperature": temperatura,
         "response_format": {"type": "json_object"},
         "messages": [{"role": "system", "content": prompt_sys},
                      {"role": "user", "content": prompt_user[:6000]}],
     }).encode()
-    req = urllib.request.Request(_CHAT_URL, data=body, method="POST", headers={
-        "Authorization": f"Bearer {chave}", "Content-Type": "application/json", "User-Agent": _UA})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            resp = json.loads(r.read())
-    except (urllib.error.URLError, TimeoutError, OSError) as e:  # rede/timeout/HTTP
-        raise RuntimeError(f"Groq indisponível ao gerar copy do site: {e}") from e
+    req = urllib.request.Request(url, data=body, method="POST", headers={
+        "Authorization": f"Bearer {autorizacao}", "Content-Type": "application/json",
+        "User-Agent": _UA})
+    with urllib.request.urlopen(req, timeout=90) as r:
+        resp = json.loads(r.read())
     return json.loads(resp["choices"][0]["message"]["content"])
+
+
+def _groq_json(prompt_sys: str, prompt_user: str, chave: str, temperatura: float = 0.6) -> dict:
+    """Copy do site via LLM, pelo GATEWAY (cascata) e só depois direto no provider.
+
+    Antes isto batia em api.groq.com com um modelo fixo e sem rede de proteção: um 429
+    no horário de pico matava a geração inteira ("Groq indisponível... HTTP Error 429")
+    e o JP não conseguia gerar demo nenhuma. A cascata
+    analise → groq-reserva → groq-modelo-b → groq-modelo-c → fallback-anthropic
+    já existia no LiteLLM, mas este caminho nunca passou por ela.
+
+    Ordem: (1) gateway, que resolve 429/TPD trocando chave e modelo sozinho;
+    (2) Groq direto, só se o GATEWAY estiver fora do ar (container caído) — aí o
+    provider cru é melhor que nada. Se os dois falharem, levanta: site com copy ruim
+    no ar é pior que geração bloqueada (contrato do pipeline)."""
+    erro_gateway = ""
+    try:
+        return _chamar(_GATEWAY_URL, os.environ.get("LITELLM_MASTER_KEY", ""),
+                       _GATEWAY_MODEL, prompt_sys, prompt_user, temperatura)
+    except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
+        erro_gateway = f"{type(e).__name__}: {e}"
+
+    if not chave:
+        raise RuntimeError(
+            f"LLM indisponível ao gerar copy do site: gateway falhou ({erro_gateway}) "
+            f"e não há chave direta configurada.")
+    try:
+        return _chamar(_CHAT_URL, chave, _MODEL, prompt_sys, prompt_user, temperatura)
+    except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
+        raise RuntimeError(
+            f"LLM indisponível ao gerar copy do site. Gateway: {erro_gateway}. "
+            f"Provider direto: {e}") from e
 
 
 def _txt(v: Any) -> str:
