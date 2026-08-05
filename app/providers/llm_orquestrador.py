@@ -34,7 +34,7 @@ _SYS = (
     "headline (string curta, promessa concreta e específica), subheadline (string, 1 "
     "frase que amplia a headline), secoes (lista de 3 a 5 objetos {titulo, corpo}; cada "
     "corpo = 1-2 frases persuasivas e DISTINTAS entre si, ancoradas nos diferenciais/"
-    "serviços reais do briefing), cta_texto (string curta, verbo de ação)."
+    "serviços reais do briefing), cta_texto (string curta, verbo de ação), cta_titulo (string curta: a chamada do bloco final, ESPECÍFICA do negócio e do nicho — nunca generica)."
 )
 
 
@@ -179,6 +179,11 @@ class LLMOrquestrador(OrquestradorProvider):
             copy_livre=briefing.get("copy_livre", ""),
             # estrutura variável: ordem das seções vem do briefing (vazio = default de sempre)
             receita_ordem=briefing.get("receita_ordem") or [],
+            cta_titulo=_txt(dados.get("cta_titulo")),
+            # prova social e acervo vem do BRIEFING (dado do cliente), nunca do
+            # LLM: pedir depoimento ao modelo seria FABRICAR prova social.
+            depoimentos=briefing.get("depoimentos") or [],
+            acervo=briefing.get("acervo") or [],
             receita_hero=briefing.get("receita_hero", ""),
         )
 

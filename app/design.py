@@ -166,7 +166,46 @@ def escolher_tema(nicho: str, nome: str) -> Tema:
     if base is None:
         base = _POOL[int(hashlib.sha1(_norm(nome).encode()).hexdigest(), 16) % len(_POOL)]
     from dataclasses import replace
-    return replace(base, acento=_variar_acento(base.acento, nome))
+    # o ink acompanha a cor FINAL (pós-rotação) — senão o botão pode sair ilegível
+    _ac = _variar_acento(base.acento, nome)
+    return replace(base, acento=_ac, acento_ink=ink_para(_ac))
+
+
+
+# ── CONTRASTE WCAG (2026-08-05) ──────────────────────────────────────────────────
+# `acento_ink` era CONSTANTE por tema, mas `_variar_acento()` roda o matiz do acento
+# por cliente. Resultado: quando a rotação clareava o acento, o ink continuava branco
+# e o botão ficava com texto invisível (auditoria Rações & Cia, erro crítico #1).
+# Não era azar daquele site: qualquer nome que rodasse o matiz pro claro caía nisso.
+# Agora o ink é CALCULADO da cor final, então nenhum tema/rotação escapa.
+def _luminancia(hex_cor: str) -> float:
+    """Luminância relativa (WCAG 2.1). Espera #rrggbb."""
+    h = (hex_cor or "").strip().lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    if len(h) != 6:
+        return 0.0
+    def canal(v: float) -> float:
+        v /= 255.0
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = (canal(int(h[i:i + 2], 16)) for i in (0, 2, 4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contraste(cor_a: str, cor_b: str) -> float:
+    """Razão de contraste WCAG entre duas cores (1.0 a 21.0)."""
+    la, lb = _luminancia(cor_a), _luminancia(cor_b)
+    claro, escuro = max(la, lb), min(la, lb)
+    return (claro + 0.05) / (escuro + 0.05)
+
+
+ALVO_CONTRASTE = 4.5   # AA para texto normal
+
+
+def ink_para(fundo: str, escuro: str = "#0b0f16", claro: str = "#ffffff") -> str:
+    """Cor de TEXTO sobre `fundo` com o melhor contraste. Nunca devolve a pior das duas:
+    botão ilegível é erro de conversão, não de estética."""
+    return escuro if contraste(fundo, escuro) >= contraste(fundo, claro) else claro
 
 
 def _variar_acento(hex_cor: str, nome: str) -> str:

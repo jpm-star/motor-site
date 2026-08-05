@@ -48,7 +48,10 @@ class BriefingSite:
     # nada sumir. Nomes: sobre, catalogo_motion, catalogo, antesdepois, preco,
     # calculadora, depoimentos, faq, formulario.
     receita_ordem: list = field(default_factory=list)
-    receita_hero: str = ""  # "video"|"foto"|"texto" — preferência; "texto" suprime a mídia do hero
+    receita_hero: str = ""
+    depoimentos: list = field(default_factory=list)  # prova social REAL [{texto,quem}] — vazio = seção omitida
+    cta_titulo: str = ""      # título do CTA final, escrito pelo LLM com o nicho
+    acervo: list = field(default_factory=list)  # fotos REAIS do cliente (caminhos relativos)  # "video"|"foto"|"texto" — preferência; "texto" suprime a mídia do hero
 
 
 def prova_social_texto(v) -> str:

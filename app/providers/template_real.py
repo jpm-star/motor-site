@@ -99,23 +99,52 @@ def _bloco_faq(t_id: str) -> str:
 </section>"""
 
 
-# Depoimentos de EXEMPLO — sempre marcados como exemplo (trava de honestidade:
-# nunca passar texto fabricado como se fosse cliente real). Mostra o FORMATO; o
-# cliente troca pelos reais depois. Rotação por JS (sem lib).
-_DEPO_EXEMPLO = [
-    ("Atendimento rápido e sem enrolação. Recomendo!", "Cliente satisfeito"),
-    ("Explicaram tudo com clareza e cumpriram o prazo.", "Cliente da região"),
-    ("Profissionais atenciosos do começo ao fim.", "Cliente recente"),
-]
+# PROVA SOCIAL SÓ COM DADO REAL (2026-08-05). Antes havia depoimento de exemplo
+# rotulado "exemplo" — a intenção era honestidade (nunca passar texto fabricado como
+# real), mas na demo o prospect lê "site inacabado" e o efeito é o OPOSTO de prova
+# social (auditoria Rações & Cia, erro crítico #3). Sem depoimento real, a seção
+# simplesmente não existe: silêncio vende mais que placeholder confessando ser vazio.
 
 
-def _bloco_depoimentos() -> str:
+def _canonical(slug: str) -> str:
+    """<link rel="canonical">. Sem ele, a mesma página indexa em variações (com/sem
+    barra, http/https, www) e o Google divide o sinal entre elas. Vazio quando não há
+    domínio conhecido — canonical apontando pro lugar errado é pior que não ter."""
+    import os as _os
+    base = (_os.environ.get("SITE_URL") or _os.environ.get("SITE_BASE_URL") or "").rstrip("/")
+    if not base:
+        return ""
+    s = (slug or "").strip("/")
+    return f'<link rel="canonical" href="{base}/{s}/">' if s else f'<link rel="canonical" href="{base}/">'
+
+def _cta_titulo(brief) -> str:
+    """Título do CTA final. Vem do LLM (que conhece o nicho); só cai num texto neutro
+    ANCORADO NO NEGÓCIO se o LLM não devolver nada. Era "Pronto pra começar?" fixo —
+    copy de outro template, que num pet shop lê como site inacabado (auditoria Rações
+    & Cia, erro crítico #2)."""
+    t = str(getattr(brief, "cta_titulo", "") or "").strip()
+    if t:
+        return t[:90]
+    nicho = str(getattr(brief, "nicho", "") or "").strip()
+    empresa = str(getattr(brief, "nome_empresa", "") or "").strip()
+    if nicho:
+        return f"Fale com a {empresa} sobre {nicho}" if empresa else f"Fale com quem entende de {nicho}"
+    return f"Fale com a {empresa}" if empresa else "Fale com a gente"
+
+
+def _bloco_depoimentos(reais: list | None = None) -> str:
+    """Seção de depoimentos. SEM dado real => string vazia (a seção não é renderizada).
+
+    `reais` = [{"texto","quem"}] vindos do cliente. Nada de exemplo, nada de rótulo."""
+    itens = [d for d in (reais or [])
+             if isinstance(d, dict) and str(d.get("texto") or "").strip()]
+    if not itens:
+        return ""
     cards = "\n".join(
         f'<figure class="depo-card"{" hidden" if i else ""}>'
-        f'<span class="depo-tag">exemplo</span>'
-        f'<blockquote>"{html.escape(txt)}"</blockquote>'
-        f'<figcaption>— {html.escape(quem)}</figcaption></figure>'
-        for i, (txt, quem) in enumerate(_DEPO_EXEMPLO))
+        f'<blockquote>"{html.escape(str(d.get("texto"))[:400])}"</blockquote>'
+        f'<figcaption>— {html.escape(str(d.get("quem") or "Cliente")[:80])}</figcaption></figure>'
+        for i, d in enumerate(itens))
     return f"""
 <section class="depo reveal" id="depoimentos">
   <h2>O que dizem</h2>
@@ -321,7 +350,8 @@ def _seg_motion(nicho: str) -> str:
     return "_generico"
 
 
-def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None) -> str:
+def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
+                           acervo: list | None = None) -> str:
     """Grid→detalhe (motion premium). MODO SERVIÇO (default, clínica): `_SERVICOS_MOTION`
     por nicho, sem preço. MODO PRODUTO (quando `produtos` vem do cartucho — e-commerce/
     vitrine): mostra preço + CTA 'Comprar pelo WhatsApp'. Aditivo: sem `produtos`, é
@@ -336,12 +366,21 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None) -
         titulo, verbo = "Nossos serviços", "quero agendar"
         servs = _SERVICOS_MOTION.get(_seg_motion(nicho), _SERVICOS_MOTION["_generico"])
         itens = [(nome, desc, kw, "") for (nome, desc, kw) in servs]
+    # ACERVO DO CLIENTE ANTES DE BANCO DE IMAGEM (2026-08-05). Antes ia DIRETO pro
+    # loremflickr/picsum sem nunca perguntar se havia foto real — não era "falha de
+    # seleção", era ausência de caminho: o gerador não recebia o acervo. Foto genérica
+    # de banco num pet shop é o erro crítico #4 da auditoria Rações & Cia.
+    acervo = [str(a).strip() for a in (acervo or []) if str(a).strip()]
     cards, dados = [], []
     for i, (nome, desc, kw, preco) in enumerate(itens):
         kwq = kw.replace(" ", ",")
-        prim = f"https://loremflickr.com/600/420/{kwq}?lock={i + 1}"
-        fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
-        big = f"https://loremflickr.com/900/620/{kwq}?lock={i + 1}"
+        if i < len(acervo):                    # foto REAL do cliente vence sempre
+            prim = big = acervo[i]
+            fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
+        else:
+            prim = f"https://loremflickr.com/600/420/{kwq}?lock={i + 1}"
+            fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
+            big = f"https://loremflickr.com/900/620/{kwq}?lock={i + 1}"
         msg = f"Olá! Vim pelo site e {verbo}: {nome}" + (f" ({preco})" if preco else "") + "."
         wa = ("https://wa.me/" + zap + "?text=" + quote(msg)) if zap else "#contato"
         preco_card = ('<span class="sv-preco">' + _e(preco) + "</span>") if preco else ""
@@ -441,11 +480,13 @@ class GeradorTemplate(GeradorSiteProvider):
         calculadora = _bloco_calculadora(acento) if getattr(t, "id", "") == "imobiliaria" else ""
         faq = _bloco_faq(getattr(t, "id", ""))  # universal (cai no genérico se o segmento não tiver)
         formulario = _bloco_form(zap, brief.nome_empresa)  # captura de lead → WhatsApp
-        depoimentos = _bloco_depoimentos()  # exemplos rotativos, sempre marcados "exemplo"
+        # só depoimento REAL do cliente; vazio => a seção nem existe
+        depoimentos = _bloco_depoimentos(getattr(brief, "depoimentos", None))
         preco = _bloco_preco(brief.ancora_preco, link)         # FAIXA de entrada + CTA (Radar) — '' se ausente
         antesdepois = _bloco_antes_depois(brief.antes_depois)  # antes/depois (Radar) — '' se ausente
         catalogo = _bloco_catalogo(brief.catalogo)             # escopo por tier — '' se cartucho não trouxe
-        catalogo_motion = _bloco_catalogo_motion(brief.nicho, zap, getattr(brief, "produtos", None))  # serviço (clínica) OU produto (e-commerce) se cartucho trouxer `produtos`
+        catalogo_motion = _bloco_catalogo_motion(brief.nicho, zap,
+            getattr(brief, "produtos", None), getattr(brief, "acervo", None))  # serviço (clínica) OU produto (e-commerce) se cartucho trouxer `produtos`
         # Logo de marca (SVG do cartucho) na nav + favicon; sem logo → texto (regressão).
         marca = (f'<a href="#topo" class="marca" aria-label="{_e(brief.nome_empresa)}">{brief.logo_svg}</a>'
                  if brief.logo_svg else
@@ -523,6 +564,7 @@ class GeradorTemplate(GeradorSiteProvider):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_e(_titulo_pagina(brief.nome_empresa, brief.nicho, brief.cidade))}</title>
 <meta name="description" content="{_e(brief.subheadline)}">
+{_canonical(slug)}
 <meta property="og:title" content="{_e(brief.nome_empresa)}">
 <meta property="og:description" content="{_e(brief.subheadline)}">
 <meta property="og:type" content="website">
@@ -607,8 +649,6 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .depo h2 {{ font-size:clamp(1.4rem,3.5vw,2rem); margin-bottom:1.4rem; letter-spacing:{t.tracking}; }}
 .depo-palco {{ position:relative; }}
 .depo-card {{ background:var(--acento-suave); border-radius:var(--radius); padding:2rem 1.6rem; position:relative; }}
-.depo-tag {{ position:absolute; top:.7rem; right:.7rem; font-size:.62rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.1em; color:var(--acento); background:var(--bg); border:1px solid var(--linha); border-radius:99px; padding:.15rem .55rem; }}
 .depo-card blockquote {{ font-size:clamp(1.05rem,2.6vw,1.3rem); font-family:"{t.fonte_titulo}",sans-serif; color:var(--ink); line-height:1.4; }}
 .depo-card figcaption {{ margin-top:.9rem; font-size:.85rem; color: color-mix(in srgb,var(--ink) 60%,var(--bg)); }}
 .hero-trust {{ margin-top:1.6rem; font-size:.82rem; font-weight:600; letter-spacing:.01em;
@@ -617,7 +657,10 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   letter-spacing:{t.tracking}; margin-bottom:2rem; }}
 .sec-titulo::after {{ content:""; display:block; width:2.4rem; height:3px; border-radius:3px;
   background:var(--acento); margin:.7rem auto 0; }}
-.lead-form button {{ margin-top:1rem; width:100%; background:var(--acento); color:#fff; font-weight:700;
+.lead-form button {{ margin-top:1rem; width:100%; background:var(--acento);
+  /* var(--acento-ink), NUNCA #fff fixo: o acento é rotacionado por cliente e o
+     branco chapado deixava o botão ilegível (auditoria Rações & Cia, crítico #1) */
+  color:var(--acento-ink); font-weight:700;
   border:0; padding:.95rem 2rem; border-radius:99px; font-size:1rem; font-family:"{t.fonte_titulo}",sans-serif;
   cursor:pointer; box-shadow:0 6px 18px -4px color-mix(in srgb,var(--acento) 55%,transparent); }}
 .preco {{ max-width:1000px; margin:3rem auto; padding:0 1.2rem; }}
@@ -700,7 +743,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 {corpo}
 <div class="faixa reveal"><strong>{_e(brief.nome_empresa)} · {_e(brief.subheadline)}</strong></div>
 <section class="cta-final reveal" id="contato">
-  <h2>Pronto pra começar?</h2>
+  <h2>{_e(_cta_titulo(brief))}</h2>
   <a class="btn btn-glow" href="{link}">{_e(cta_final)}</a>
 </section>
 <footer>© {_e(brief.nome_empresa)}{f' · {_e(brief.nicho)}' if brief.nicho else ''}</footer>
