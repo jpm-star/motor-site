@@ -38,16 +38,38 @@ _SYS = (
 )
 
 
+def _do_env(arquivo: str, nome: str) -> str:
+    """Lê UMA variável de um .env. Os segredos vivem em arquivo gitignored: quem só olha
+    o repo versionado não vê que a variável existe (e nem que está faltando)."""
+    p = Path(arquivo)
+    if not p.is_file():
+        return ""
+    for l in p.read_text(errors="ignore").splitlines():
+        if l.strip().startswith(f"{nome}="):
+            return l.split("=", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
 def _chave() -> str:
     """GROQ_API_KEY do env, SITE_LLM_API_KEY, ou sdr-motor/.env. "" se ausente."""
     for var in ("GROQ_API_KEY", "SITE_LLM_API_KEY"):
         if k := os.environ.get(var, "").strip():
             return k
-    env = Path(os.environ.get("RR_ENV_PATH", "/root/sdr-motor/.env"))
-    if env.is_file():
-        for l in env.read_text().splitlines():
-            if l.strip().startswith("GROQ_API_KEY="):
-                return l.split("=", 1)[1].strip().strip('"').strip("'")
+    return _do_env(os.environ.get("RR_ENV_PATH", "/root/sdr-motor/.env"), "GROQ_API_KEY")
+
+
+def _master() -> str:
+    """Chave do gateway LiteLLM.
+
+    Lia SÓ de os.environ, e o painel-operacoes não exporta essa variável: em produção o
+    gateway respondia 401 e TODA geração caía no Groq cru, onde estourava 429. A cascata
+    de 10 chaves existia e nunca era usada — falha silenciosa, porque o fallback
+    "funcionava" até a hora de pico. Agora procura no .env como as outras chaves."""
+    if k := os.environ.get("LITELLM_MASTER_KEY", "").strip():
+        return k
+    for env in ("/root/noemi-infra/.env", "/root/sdr-motor/.env"):
+        if k := _do_env(env, "LITELLM_MASTER_KEY"):
+            return k
     return ""
 
 
@@ -87,7 +109,7 @@ def _groq_json(prompt_sys: str, prompt_user: str, chave: str, temperatura: float
     no ar é pior que geração bloqueada (contrato do pipeline)."""
     erro_gateway = ""
     try:
-        return _chamar(_GATEWAY_URL, os.environ.get("LITELLM_MASTER_KEY", ""),
+        return _chamar(_GATEWAY_URL, _master(),
                        _GATEWAY_MODEL, prompt_sys, prompt_user, temperatura)
     except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as e:
         erro_gateway = f"{type(e).__name__}: {e}"

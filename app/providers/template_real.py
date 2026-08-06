@@ -289,73 +289,20 @@ def _bloco_antes_depois(itens: list) -> str:
 
 
 # ── Catálogo-motion (TASK A): grid de serviços → detalhe com transição premium.
-# Vira a seção "Nossos serviços" do site gerado — MESMO padrão dos demos, agora
-# dinâmico por cliente. Serviços = típicos do segmento (o cliente edita depois);
-# NUNCA inventa preço (honestidade da base) — valor fica "no WhatsApp". Imagem
-# loremflickr temática + fallback picsum (nunca quebra). Estilo usa as vars do
-# tema (--acento/--superficie/...) pra casar com a paleta de cada segmento.
-_SERVICOS_MOTION = {
-    "odonto": [
-        ("Avaliação", "Consulta pra diagnóstico e plano de tratamento, sem compromisso.", "dentist,consultation"),
-        ("Limpeza e Profilaxia", "Remoção de placa e tártaro, polimento e orientação de higiene.", "dental,cleaning"),
-        ("Clareamento", "Clareamento profissional com acompanhamento — sorriso mais branco.", "teeth,whitening,smile"),
-        ("Implante", "Reposição de dente com implante fixo, aparência e mastigação naturais.", "dental,implant"),
-        ("Ortodontia", "Aparelho fixo ou alinhador transparente pra alinhar o sorriso.", "braces,orthodontics"),
-    ],
-    "estetica": [
-        ("Avaliação Estética", "Análise personalizada e plano de cuidados sob medida.", "beauty,consultation"),
-        ("Limpeza de Pele", "Limpeza profunda com extração e hidratação.", "facial,skincare"),
-        ("Botox / Toxina", "Suaviza linhas de expressão com naturalidade.", "beauty,face,treatment"),
-        ("Preenchimento", "Restaura volume e contorno do rosto com ácido hialurônico.", "aesthetics,skincare"),
-        ("Depilação a Laser", "Redução duradoura dos pelos com conforto.", "laser,beauty"),
-    ],
-    "fisio": [
-        ("Avaliação Fisioterapêutica", "Diagnóstico funcional e plano de tratamento individual.", "physiotherapy"),
-        ("Fisioterapia Ortopédica", "Recuperação de lesões, pós-cirúrgico e dores articulares.", "physiotherapy,rehab"),
-        ("RPG / Postural", "Reeducação postural que alivia dores nas costas.", "posture,stretching"),
-        ("Pilates Clínico", "Fortalecimento e mobilidade com acompanhamento profissional.", "pilates"),
-    ],
-    "salao": [
-        ("Corte", "Corte personalizado ao seu rosto e estilo, com finalização.", "haircut,salon"),
-        ("Coloração / Mechas", "Cor, luzes e mechas com brilho que dura.", "hair,color,salon"),
-        ("Tratamento / Hidratação", "Reconstrução e nutrição dos fios danificados.", "hair,treatment,spa"),
-        ("Manicure & Pedicure", "Unhas bem-feitas e duradouras, com capricho.", "manicure,nails"),
-    ],
-    "psico": [
-        ("Terapia Individual", "Espaço seguro pra cuidar da ansiedade, estresse e questões pessoais.", "therapy,counseling"),
-        ("Terapia de Casal", "Mediação pra melhorar a comunicação e a relação.", "couple,counseling"),
-        ("Atendimento Online", "Sessões por vídeo, com o mesmo acolhimento, de onde você estiver.", "online,therapy"),
-    ],
-    "_generico": [
-        ("Atendimento", "Atendimento próximo e sem enrolação, do jeito que você precisa.", "service,professional"),
-        ("Orçamento", "Chame no WhatsApp e receba os valores antes de fechar qualquer coisa.", "consultation,meeting"),
-        ("Acompanhamento", "A gente acompanha do início à entrega, no prazo combinado.", "support,office"),
-    ],
-}
+# Vira a seção "Nossos serviços" do site gerado. Serviços = o que ESSE segmento vende
+# de verdade (`app.servicos`: curadoria → cache → LLM), nunca inventa preço — valor
+# fica "no WhatsApp". O dicionário fechado de 5 segmentos que morava aqui era a causa
+# do erro crítico #4: pet shop caía no genérico e saía com foto de escritório.
+from ..servicos import servicos_do_segmento
 
 
-def _seg_motion(nicho: str) -> str:
-    n = (nicho or "").lower()
-    if any(k in n for k in ("odonto", "dent", "implant", "ortodont", "sorri")):
-        return "odonto"
-    if "fisio" in n:
-        return "fisio"
-    # salão ANTES de estética: "salão de beleza" não pode cair em estética por causa de "beleza"
-    if any(k in n for k in ("salão", "salao", "cabel", "hair", "manicure", "barbe")):
-        return "salao"
-    if any(k in n for k in ("estét", "estet", "harmoniz", "facial", "beleza", "botox", "derm")):
-        return "estetica"
-    if any(k in n for k in ("psico", "terap")):
-        return "psico"
-    return "_generico"
 
 
 def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
                            acervo: list | None = None) -> str:
-    """Grid→detalhe (motion premium). MODO SERVIÇO (default, clínica): `_SERVICOS_MOTION`
-    por nicho, sem preço. MODO PRODUTO (quando `produtos` vem do cartucho — e-commerce/
-    vitrine): mostra preço + CTA 'Comprar pelo WhatsApp'. Aditivo: sem `produtos`, é
-    exatamente o comportamento de serviço de antes."""
+    """Grid→detalhe (motion premium). MODO SERVIÇO (default): `servicos_do_segmento`, o
+    que o ramo vende de verdade, sem preço. MODO PRODUTO (quando `produtos` vem do
+    cartucho — e-commerce/vitrine): mostra preço + CTA 'Comprar pelo WhatsApp'."""
     modo_produto = bool(produtos)
     if modo_produto:
         titulo, verbo = "Nossos produtos", "quero comprar"
@@ -364,33 +311,40 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
                  for p in produtos if str(p.get("nome", "")).strip()]
     else:
         titulo, verbo = "Nossos serviços", "quero agendar"
-        servs = _SERVICOS_MOTION.get(_seg_motion(nicho), _SERVICOS_MOTION["_generico"])
-        itens = [(nome, desc, kw, "") for (nome, desc, kw) in servs]
+        itens = [(nome, desc, kw, "") for (nome, desc, kw) in servicos_do_segmento(nicho)]
     # ACERVO DO CLIENTE ANTES DE BANCO DE IMAGEM (2026-08-05). Antes ia DIRETO pro
     # loremflickr/picsum sem nunca perguntar se havia foto real — não era "falha de
     # seleção", era ausência de caminho: o gerador não recebia o acervo. Foto genérica
     # de banco num pet shop é o erro crítico #4 da auditoria Rações & Cia.
-    acervo = [str(a).strip() for a in (acervo or []) if str(a).strip()]
+    # POSIÇÃO IMPORTA, então NÃO se compacta a lista: a entrada vazia é um buraco
+    # deliberado ("não achei foto boa PRA ESTE serviço"), e filtrá-la fora empurraria a
+    # foto do serviço 3 pro card do serviço 1. Buraco = cai no banco de imagem ali só.
+    acervo = [str(a).strip() for a in (acervo or [])]
     cards, dados = [], []
     for i, (nome, desc, kw, preco) in enumerate(itens):
-        kwq = kw.replace(" ", ",")
-        if i < len(acervo):                    # foto REAL do cliente vence sempre
-            prim = big = acervo[i]
-            fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
-        else:
-            prim = f"https://loremflickr.com/600/420/{kwq}?lock={i + 1}"
-            fb = f"https://picsum.photos/seed/{kwq}{i + 1}/600/420"
-            big = f"https://loremflickr.com/900/620/{kwq}?lock={i + 1}"
+        foto = acervo[i] if i < len(acervo) and acervo[i] else ""
         msg = f"Olá! Vim pelo site e {verbo}: {nome}" + (f" ({preco})" if preco else "") + "."
         wa = ("https://wa.me/" + zap + "?text=" + quote(msg)) if zap else "#contato"
         preco_card = ('<span class="sv-preco">' + _e(preco) + "</span>") if preco else ""
+        # SEM FOTO APROVADA => PLACA, NUNCA FOTO ALEATÓRIA (2026-08-06). Aqui havia um
+        # fallback pro loremflickr, que devolve uma imagem qualquer do Flickr pra
+        # palavra-chave: a demo do pet shop foi ao ar com um clipart de banheira e uma
+        # ESTÁTUA DE URSO ilustrando "Acessórios e Higiene". Corrigir a palavra-chave não
+        # resolve — a fonte é aleatória por natureza, e o erro só aparece DEPOIS de
+        # publicado, na frente do dono do negócio. A placa (gradiente do tema + inicial)
+        # é sóbria, casa com a paleta e nunca envergonha. Foto entra pelo acervo julgado
+        # (apps/painel-operacoes/acervo_fotos.py) ou pela foto do próprio cliente.
+        if foto:
+            miolo = ('<img loading="lazy" src="' + foto + '" alt="' + _e(nome) + '">')
+        else:
+            miolo = ('<span class="sv-placa" aria-hidden="true">'
+                     + _e(nome.strip()[:1].upper() or "•") + "</span>")
         cards.append(
             '<button class="sv-card reveal" data-i="' + str(i) + '" aria-label="Ver ' + _e(nome) + '">'
-            '<div class="sv-thumb"><img loading="lazy" src="' + prim + '" '
-            "onerror=\"this.onerror=null;this.src='" + fb + "'\" alt=\"" + _e(nome) + '"></div>'
+            '<div class="sv-thumb' + ("" if foto else " sv-semfoto") + '">' + miolo + "</div>"
             '<div class="sv-cbody"><h3>' + _e(nome) + "</h3>" + preco_card + "</div></button>"
         )
-        dados.append({"nome": nome, "desc": desc, "img": big, "fb": fb, "wa": wa, "preco": preco})
+        dados.append({"nome": nome, "desc": desc, "img": foto, "fb": "", "wa": wa, "preco": preco})
     grid = ('<section class="servicos reveal" id="servicos"><h2 class="sec-titulo">' + titulo + "</h2>"
             '<div class="sv-grid">' + "".join(cards) + "</div></section>")
     cta_label = "Comprar pelo WhatsApp" if modo_produto else "Agendar pelo WhatsApp"
@@ -406,7 +360,7 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
         "<script>(function(){var D=" + json.dumps(dados, ensure_ascii=False) + ";"
         "var det=document.getElementById('svDet'),volta=document.getElementById('svVolta');"
         "function abrir(i){var s=D[i];var im=document.getElementById('svImg');"
-        "im.src=s.img;im.onerror=function(){this.onerror=null;this.src=s.fb};"
+        "im.src=s.img||'';im.style.display=s.img?'':'none';"
         "document.getElementById('svNome').textContent=s.nome;"
         "document.getElementById('svPreco').textContent=s.preco||'';"
         "document.getElementById('svDesc').textContent=s.desc;"
@@ -431,6 +385,10 @@ _MOTION_CSS = """
 .sv-card:active{transform:translateY(-2px) scale(.99)}
 .sv-thumb{aspect-ratio:4/3;overflow:hidden;background:color-mix(in srgb,var(--ink) 8%,var(--bg))}
 .sv-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.16,1,.3,1)}
+.sv-thumb.sv-semfoto{display:grid;place-items:center;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--acento) 22%,var(--bg)),color-mix(in srgb,var(--acento) 6%,var(--bg)))}
+.sv-placa{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:800;letter-spacing:-.03em;
+  color:color-mix(in srgb,var(--acento) 72%,var(--ink));opacity:.55;line-height:1}
 .sv-card:hover .sv-thumb img{transform:scale(1.07)}
 .sv-cbody{padding:.9rem 1rem 1.1rem}
 .sv-cbody h3{font-size:1rem;font-weight:700;color:var(--ink)}
@@ -719,6 +677,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 @media(prefers-reduced-motion:reduce) {{ .hero-orb {{ animation:none; }} .scroll-prog {{ display:none; }}
   .grid > .reveal, .cat-grid > * {{ transition-delay:0ms; }} }}
 {design.css_motion()}
+{design.css_motion_scroll()}
 {_MOTION_CSS}
 </style>
 </head>
@@ -752,6 +711,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 </a>
 {design.js_reveal()}
 {design.js_interacoes()}
+{design.js_motion_scroll()}
 <script>
 (function(){{
   var bar=document.querySelector('.scroll-prog'), nav=document.querySelector('.nav');

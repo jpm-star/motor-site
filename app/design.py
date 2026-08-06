@@ -339,6 +339,95 @@ def js_reveal() -> str:
             "else{document.querySelectorAll('.reveal').forEach(el=>el.classList.add('vis'));}</script>")
 
 
+def css_motion_scroll() -> str:
+    """Camada 2 do motion: animação LIGADA AO SCROLL (referência: lusion.co).
+
+    A camada 1 (`css_motion`) dispara por gatilho binário — o IntersectionObserver só
+    sabe "entrou na tela". O que faz um site parecer caro é a animação acompanhar a
+    posição real do elemento, com peso físico. `animation-timeline: view()` faz isso
+    em CSS puro (Chrome/Edge 115+). Tudo aqui vive dentro de @supports: navegador sem
+    suporte fica exatamente com a camada 1, que já é boa — nada degrada pra pior.
+
+    Quatro efeitos, escolhidos pelo que aparece em 10 segundos num celular:
+      1. seção revelada por CORTINA (clip-path), não por fade — leitura de "abrir";
+      2. mídia do hero com parallax e escala conforme rola;
+      3. título do hero entrando palavra a palavra (o `js_motion_scroll` fatia);
+      4. cards de serviço com profundidade ao entrar.
+    """
+    return """
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* 1. CORTINA — a seção é descoberta de baixo pra cima enquanto entra na tela.
+       `both` mantém o estado final: passou, fica revelado (não pisca ao voltar). */
+    @keyframes cortina {
+      from { clip-path: inset(0 0 42% 0); opacity:.25; transform: translateY(38px) scale(.985); }
+      to   { clip-path: inset(0 0 0 0);   opacity:1;   transform: none; }
+    }
+    .sobre, .servicos, .catalogo, .antes-depois, .preco, .depo, .faq, .calc {
+      animation: cortina linear both; animation-timeline: view();
+      animation-range: entry 8% cover 34%;
+    }
+    /* 2. PARALLAX do hero: a mídia sobe mais devagar que o texto e desamplia. */
+    @keyframes hero-parallax {
+      from { transform: scale(1.16) translateY(0); }
+      to   { transform: scale(1.01) translateY(-8%); }
+    }
+    .hero > .hero-media { animation: hero-parallax linear both; animation-timeline: view(); }
+    /* a aurora respira no mesmo eixo — o fundo deixa de ser estático atrás do texto */
+    @keyframes aurora-scroll { from { transform: translateY(0) scale(1); opacity:1; }
+                               to   { transform: translateY(-14%) scale(1.12); opacity:.55; } }
+    .hero .aurora { animation: aurora-scroll linear both; animation-timeline: view(); }
+    /* 3. TÍTULO palavra a palavra. O atraso vem do índice que o JS carimba em --w. */
+    @keyframes palavra { from { opacity:0; transform: translateY(.5em) rotate(1.4deg); filter: blur(5px); }
+                         to   { opacity:1; transform: none; filter: none; } }
+    .hero h1 .pal { display:inline-block; animation: palavra .62s cubic-bezier(.16,1,.3,1) both;
+                    animation-delay: calc(var(--w,0) * 55ms + 120ms); }
+    /* 4. CARDS de serviço com profundidade — entram como se viessem de trás. */
+    @keyframes card-fundo { from { opacity:0; transform: translateY(30px) scale(.94); }
+                            to   { opacity:1; transform: none; } }
+    .sv-grid > .sv-card, .cat-grid > * {
+      animation: card-fundo linear both; animation-timeline: view();
+      animation-range: entry 4% cover 26%;
+    }
+    /* a foto do card ganha vida no scroll, não só no hover (que não existe no toque) */
+    @keyframes thumb-zoom { from { transform: scale(1.14); } to { transform: scale(1); } }
+    .sv-thumb img { animation: thumb-zoom linear both; animation-timeline: view(); }
+  }
+}
+/* TILT dos cards: 3D leve seguindo o cursor. As variáveis são escritas pelo JS; sem
+   JS (ou sem mouse) elas ficam em 0 e o card não se mexe. */
+.sv-card, .card { transform: perspective(760px) rotateX(var(--ty,0deg)) rotateY(var(--tx,0deg)); }
+.sv-card { transition: transform .45s cubic-bezier(.16,1,.3,1), box-shadow .3s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .sv-card, .card { transform:none; }
+  .hero h1 .pal { animation:none; opacity:1; }
+}"""
+
+
+def js_motion_scroll() -> str:
+    """As duas peças de motion que CSS sozinho não faz: fatiar o título em palavras e
+    ler a posição do cursor pro tilt. Ambas saem do ar em prefers-reduced-motion, e a
+    do tilt só liga em ponteiro fino — num celular ela seria peso morto."""
+    return ("<script>(function(){"
+            "if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;"
+            # título → palavras. textContent (não innerHTML): o h1 pode conter o nome do
+            # cliente, e reinjetar HTML aqui seria abrir uma porta de XSS de graça.
+            "var h=document.querySelector('.hero h1');"
+            "if(h&&!h.querySelector('.pal')){var ps=h.textContent.split(/\\s+/).filter(Boolean);"
+            "h.textContent='';ps.forEach(function(p,i){var s=document.createElement('span');"
+            "s.className='pal';s.style.setProperty('--w',i);s.textContent=p;h.appendChild(s);"
+            "if(i<ps.length-1)h.appendChild(document.createTextNode(' '));});}"
+            # tilt: só com mouse de verdade
+            "if(!matchMedia('(hover:hover) and (pointer:fine)').matches)return;"
+            "document.querySelectorAll('.sv-card,.card').forEach(function(c){"
+            "c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();"
+            "c.style.setProperty('--tx',(((e.clientX-r.left)/r.width-.5)*7).toFixed(2)+'deg');"
+            "c.style.setProperty('--ty',((.5-(e.clientY-r.top)/r.height)*7).toFixed(2)+'deg');});"
+            "c.addEventListener('pointerleave',function(){c.style.setProperty('--tx','0deg');"
+            "c.style.setProperty('--ty','0deg');});});"
+            "})();</script>")
+
+
 def favicon(nome: str, acento: str) -> str:
     """Monograma SVG (inicial + acento) como data URI — self-contained, sem asset."""
     from urllib.parse import quote
