@@ -293,9 +293,38 @@ def _bloco_antes_depois(itens: list) -> str:
 # de verdade (`app.servicos`: curadoria → cache → LLM), nunca inventa preço — valor
 # fica "no WhatsApp". O dicionário fechado de 5 segmentos que morava aqui era a causa
 # do erro crítico #4: pet shop caía no genérico e saía com foto de escritório.
+from .. import icones
 from ..servicos import servicos_do_segmento
 
 
+
+
+# Ícone do card quando não há foto aprovada. Mapa curto de propósito: cobre os verbos
+# que aparecem em quase todo catálogo de serviço e cai num neutro para o resto — um mapa
+# grande daria a ilusão de precisão que ele não tem.
+_ICONE_POR_TERMO = (
+    (("avalia", "consulta", "diagn", "check"), "check-circle"),
+    (("limpe", "higien", "banho", "tosa"), "sparkles"),
+    (("clarea", "estetic", "harmoniz", "beleza"), "star"),
+    (("implant", "protese", "cirurg", "restaur"), "shield-check"),
+    (("ortodont", "aparelho", "alinhad"), "heart"),
+    (("agend", "hora marcada", "marcaç"), "calendar"),
+    (("entrega", "delivery", "domicil"), "trending-up"),
+    (("ração", "racao", "aliment", "produto", "acess"), "award"),
+    (("treino", "muscula", "aula", "personal"), "zap"),
+    (("consultor", "assessor", "juríd", "juridic", "contab"), "users"),
+    (("atendimento", "suporte", "whatsapp"), "message-circle"),
+)
+
+
+def _icone_servico(nome: str) -> str:
+    """Nome do serviço -> nome de ícone. 'sparkles' é o neutro: existe sempre e não
+    afirma nada errado sobre o serviço."""
+    n = (nome or "").lower()
+    for termos, ic in _ICONE_POR_TERMO:
+        if any(t in n for t in termos):
+            return ic
+    return "sparkles"
 
 
 def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
@@ -337,8 +366,12 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
         if foto:
             miolo = ('<img loading="lazy" src="' + foto + '" alt="' + _e(nome) + '">')
         else:
+            # ÍCONE, não a inicial gigante. A primeira versão punha a letra do serviço
+            # em corpo enorme; publicado, virou um "A" e um "L" de 60px preenchendo o
+            # card — lê como placeholder quebrado, não como design. Ícone de traço no
+            # acento do tema é neutro, some no fundo e não compete com o texto.
             miolo = ('<span class="sv-placa" aria-hidden="true">'
-                     + _e(nome.strip()[:1].upper() or "•") + "</span>")
+                     + icones.icone(_icone_servico(nome), size=40, stroke=1.5) + "</span>")
         cards.append(
             '<button class="sv-card reveal" data-i="' + str(i) + '" aria-label="Ver ' + _e(nome) + '">'
             '<div class="sv-thumb' + ("" if foto else " sv-semfoto") + '">' + miolo + "</div>"
@@ -387,8 +420,8 @@ _MOTION_CSS = """
 .sv-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.16,1,.3,1)}
 .sv-thumb.sv-semfoto{display:grid;place-items:center;
   background:linear-gradient(135deg,color-mix(in srgb,var(--acento) 22%,var(--bg)),color-mix(in srgb,var(--acento) 6%,var(--bg)))}
-.sv-placa{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:800;letter-spacing:-.03em;
-  color:color-mix(in srgb,var(--acento) 72%,var(--ink));opacity:.55;line-height:1}
+.sv-placa{display:grid;place-items:center;color:color-mix(in srgb,var(--acento) 62%,var(--ink));opacity:.5}
+.sv-placa svg{width:40px;height:40px}
 .sv-card:hover .sv-thumb img{transform:scale(1.07)}
 .sv-cbody{padding:.9rem 1rem 1.1rem}
 .sv-cbody h3{font-size:1rem;font-weight:700;color:var(--ink)}
@@ -609,8 +642,13 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 .depo-card {{ background:var(--acento-suave); border-radius:var(--radius); padding:2rem 1.6rem; position:relative; }}
 .depo-card blockquote {{ font-size:clamp(1.05rem,2.6vw,1.3rem); font-family:"{t.fonte_titulo}",sans-serif; color:var(--ink); line-height:1.4; }}
 .depo-card figcaption {{ margin-top:.9rem; font-size:.85rem; color: color-mix(in srgb,var(--ink) 60%,var(--bg)); }}
+/* `display:block`, não inline-block: o `.btn` que vem antes TAMBÉM é inline-block, e dois
+   inline-block adjacentes ficam na MESMA LINHA — a linha de credibilidade encostava no
+   botão e o `margin-top` não separava nada (não há quebra pra ele empurrar). Publicado,
+   lia como texto sobreposto ao CTA. Bloco cai pra própria linha e o text-align:center do
+   hero centraliza sozinho. */
 .hero-trust {{ margin-top:1.6rem; font-size:.82rem; font-weight:600; letter-spacing:.01em;
-  opacity:.82; display:inline-block; }}
+  opacity:.82; display:block; }}
 .sec-titulo {{ text-align:center; font-size:clamp(1.5rem,3.6vw,2.1rem); font-weight:{t.peso_titulo};
   letter-spacing:{t.tracking}; margin-bottom:2rem; }}
 .sec-titulo::after {{ content:""; display:block; width:2.4rem; height:3px; border-radius:3px;

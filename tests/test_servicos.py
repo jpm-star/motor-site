@@ -56,3 +56,43 @@ def test_acervo_com_buraco_no_meio_nao_desloca_as_fotos():
     html = _bloco_catalogo_motion("pet shop", "", acervo=["", "/x/2.jpg"])
     i_placa, i_foto = html.index("sv-semfoto"), html.index("/x/2.jpg")
     assert i_placa < i_foto, "a foto subiu pro card errado"
+
+
+def test_titulo_nao_e_fatiado_em_spans():
+    """REGRESSÃO (2026-08-06): fatiar o h1 em <span class="pal"> APAGOU o título de todos
+    os sites. O h1 usa background-clip:text — os spans herdam o text-fill transparente e
+    não herdam o gradiente do fundo, então cada palavra vira texto invisível.
+
+    Regra: não se fatia elemento que usa background-clip:text."""
+    from app import design
+    js = design.js_motion_scroll()
+    assert "'pal'" not in js and '"pal"' not in js, "o fatiamento do título voltou"
+    css = design.css_motion_scroll()
+    assert ".hero h1 {" in css, "o título precisa animar como elemento inteiro"
+
+
+def test_card_sem_foto_usa_icone_nao_letra_gigante():
+    """REGRESSÃO: a placa mostrava a INICIAL do serviço em corpo enorme. Publicado, virou
+    um 'A' e um 'L' de 60px ocupando o card — lê como placeholder quebrado."""
+    from app.providers.template_real import _bloco_catalogo_motion
+
+    html = _bloco_catalogo_motion("odontologia", "5514999999999")
+    placa = html.split('class="sv-placa"')[1][:200]
+    assert "<svg" in placa, "a placa tem que trazer ícone"
+    assert "font-size:clamp(2.4rem" not in html, "a tipografia gigante voltou"
+    # e o texto do serviço continua no card, que é o que de fato informa
+    assert "Avaliação" in html
+
+
+def test_hero_trust_nao_divide_linha_com_o_cta():
+    """REGRESSÃO: `.hero-trust` era inline-block, igual ao `.btn` que vem antes — dois
+    inline-block adjacentes ficam na MESMA LINHA e o margin-top não separa nada. No site
+    publicado, lia como texto sobreposto ao botão."""
+    from app.providers.template_real import TemplateRealGerador
+    from app.providers.base import BriefingSite
+
+    html = TemplateRealGerador().gerar(
+        BriefingSite(nome_empresa="X", nicho="clínica odontológica", headline="H",
+                     subheadline="S", secoes=[], cta_texto="C"), "x").arquivos["index.html"]
+    i = html.index(".hero-trust")
+    assert "display:block" in html[i:i + 220], "hero-trust voltou a dividir linha com o CTA"

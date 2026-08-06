@@ -377,11 +377,18 @@ def css_motion_scroll() -> str:
     @keyframes aurora-scroll { from { transform: translateY(0) scale(1); opacity:1; }
                                to   { transform: translateY(-14%) scale(1.12); opacity:.55; } }
     .hero .aurora { animation: aurora-scroll linear both; animation-timeline: view(); }
-    /* 3. TÍTULO palavra a palavra. O atraso vem do índice que o JS carimba em --w. */
-    @keyframes palavra { from { opacity:0; transform: translateY(.5em) rotate(1.4deg); filter: blur(5px); }
-                         to   { opacity:1; transform: none; filter: none; } }
-    .hero h1 .pal { display:inline-block; animation: palavra .62s cubic-bezier(.16,1,.3,1) both;
-                    animation-delay: calc(var(--w,0) * 55ms + 120ms); }
+    /* 3. TÍTULO entrando inteiro.
+       ERA palavra a palavra, fatiado em <span class="pal"> pelo JS — e isso APAGOU O H1
+       de todos os sites (2026-08-06). O h1 usa `background-clip:text`: o texto é pintado
+       pelo gradiente do fundo DELE. Os spans herdaram o `-webkit-text-fill-color:
+       transparent` e NÃO herdaram o gradiente (que vive na caixa do pai), então cada
+       palavra virou texto transparente sobre nada. As 7 palavras ficavam lá, com
+       opacity 1 e largura real, pintadas de invisível.
+       Animar o elemento inteiro não tem esse problema e entrega quase o mesmo efeito.
+       Regra que fica: NÃO se fatia um elemento que usa background-clip:text. */
+    @keyframes titulo-entra { from { opacity:0; transform: translateY(.4em); filter: blur(6px); }
+                              to   { opacity:1; transform: none; filter: none; } }
+    .hero h1 { animation: titulo-entra .7s cubic-bezier(.16,1,.3,1) both; animation-delay: .12s; }
     /* 4. CARDS de serviço com profundidade — entram como se viessem de trás. */
     @keyframes card-fundo { from { opacity:0; transform: translateY(30px) scale(.94); }
                             to   { opacity:1; transform: none; } }
@@ -400,7 +407,7 @@ def css_motion_scroll() -> str:
 .sv-card { transition: transform .45s cubic-bezier(.16,1,.3,1), box-shadow .3s ease; }
 @media (prefers-reduced-motion: reduce) {
   .sv-card, .card { transform:none; }
-  .hero h1 .pal { animation:none; opacity:1; }
+  .hero h1 { animation:none; opacity:1; filter:none; }
 }"""
 
 
@@ -410,13 +417,9 @@ def js_motion_scroll() -> str:
     do tilt só liga em ponteiro fino — num celular ela seria peso morto."""
     return ("<script>(function(){"
             "if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;"
-            # título → palavras. textContent (não innerHTML): o h1 pode conter o nome do
-            # cliente, e reinjetar HTML aqui seria abrir uma porta de XSS de graça.
-            "var h=document.querySelector('.hero h1');"
-            "if(h&&!h.querySelector('.pal')){var ps=h.textContent.split(/\\s+/).filter(Boolean);"
-            "h.textContent='';ps.forEach(function(p,i){var s=document.createElement('span');"
-            "s.className='pal';s.style.setProperty('--w',i);s.textContent=p;h.appendChild(s);"
-            "if(i<ps.length-1)h.appendChild(document.createTextNode(' '));});}"
+            # O FATIAMENTO DO TÍTULO FOI REMOVIDO (2026-08-06): quebrava o
+            # background-clip:text do h1 e deixava o título invisível. A entrada dele
+            # agora é 100% CSS (`titulo-entra`), sem tocar no DOM — ver css_motion_scroll.
             # tilt: só com mouse de verdade
             "if(!matchMedia('(hover:hover) and (pointer:fine)').matches)return;"
             "document.querySelectorAll('.sv-card,.card').forEach(function(c){"
