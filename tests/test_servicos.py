@@ -88,11 +88,11 @@ def test_hero_trust_nao_divide_linha_com_o_cta():
     """REGRESSÃO: `.hero-trust` era inline-block, igual ao `.btn` que vem antes — dois
     inline-block adjacentes ficam na MESMA LINHA e o margin-top não separa nada. No site
     publicado, lia como texto sobreposto ao botão."""
-    from app.providers.template_real import TemplateRealGerador
     from app.providers.base import BriefingSite
+    from app.providers.template_real import GeradorTemplate
 
-    html = TemplateRealGerador().gerar(
+    html = GeradorTemplate().gerar(
         BriefingSite(nome_empresa="X", nicho="clínica odontológica", headline="H",
-                     subheadline="S", secoes=[], cta_texto="C"), "x").arquivos["index.html"]
+                     subheadline="S", secoes=[], cta_texto="C", cta_contato="5514999999999"), "x").arquivos["index.html"]
     i = html.index(".hero-trust")
     assert "display:block" in html[i:i + 220], "hero-trust voltou a dividir linha com o CTA"
