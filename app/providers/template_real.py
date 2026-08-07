@@ -384,7 +384,7 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
     overlay = (
         '<div class="sv-detalhe" id="svDet" role="dialog" aria-modal="true">'
         '<div class="sv-hero"><button class="sv-volta" id="svVolta" aria-label="Voltar">&larr;</button>'
-        '<img id="svImg" alt=""></div>'
+        '<img id="svImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""></div>'
         '<div class="sv-dbody"><h2 id="svNome"></h2><div class="sv-dprice" id="svPreco"></div><p id="svDesc"></p>'
         '<div class="sv-ctas"><a class="sv-cta" id="svWa" href="#" target="_blank" rel="noopener">' + cta_label + "</a></div>"
         "</div></div>"
@@ -393,7 +393,7 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
         "<script>(function(){var D=" + json.dumps(dados, ensure_ascii=False) + ";"
         "var det=document.getElementById('svDet'),volta=document.getElementById('svVolta');"
         "function abrir(i){var s=D[i];var im=document.getElementById('svImg');"
-        "im.src=s.img||'';im.style.display=s.img?'':'none';"
+        "if(s.img)im.src=s.img;im.style.display=s.img?'':'none';"
         "document.getElementById('svNome').textContent=s.nome;"
         "document.getElementById('svPreco').textContent=s.preco||'';"
         "document.getElementById('svDesc').textContent=s.desc;"

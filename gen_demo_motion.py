@@ -136,7 +136,7 @@ footer{{text-align:center;color:var(--mut);font-size:.75rem;padding:24px}}
 </div>
 <div class="detalhe" id="det" role="dialog" aria-modal="true">
   <div class="dhero"><button class="voltar" id="volta" aria-label="Voltar">←</button>
-    <img id="dimg" src="" alt=""></div>
+    <img id="dimg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""></div>
   <div class="dbody">
     <span class="badge">DEMONSTRAÇÃO</span>
     <h2 id="dnome"></h2><div class="dprice" id="dpreco"></div><p id="ddesc"></p>

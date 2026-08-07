@@ -101,7 +101,12 @@ def test_hero_trust_nao_divide_linha_com_o_cta():
 def test_overlay_nao_nasce_com_src_vazio():
     """REGRESSÃO: `<img src="">` não é "sem imagem" — o navegador resolve a string vazia
     para a URL da PÁGINA e dispara um request extra que sempre falha. Estava em 39 dos 54
-    sites publicados; o gate visual (qa_visual) o encontrou."""
+    sites publicados; o gate visual (qa_visual) o encontrou.
+
+    TIRAR o src NÃO resolve, e foi o que a primeira correção fez: `<img>` sem src reporta
+    `complete=true` e `naturalWidth=0` — a MESMA assinatura de imagem quebrada que a sonda
+    procura (medido no Chromium). Os 39 sites continuariam reprovando depois de regerados.
+    Só um src que CARREGA (GIF 1×1 transparente) tira o elemento do radar."""
     from app.providers.base import BriefingSite
     from app.providers.template_real import GeradorTemplate
 
@@ -110,3 +115,6 @@ def test_overlay_nao_nasce_com_src_vazio():
                      subheadline="S", secoes=[], cta_texto="C",
                      cta_contato="5514999999999"), "x").arquivos["index.html"]
     assert 'src=""' not in html, "voltou um src vazio no HTML"
+    i = html.index('id="svImg"')
+    assert 'src="data:image/gif;base64,' in html[i:i + 140], \
+        "o placeholder do overlay voltou a ficar sem src que carregue"
