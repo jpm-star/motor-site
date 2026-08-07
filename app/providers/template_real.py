@@ -384,7 +384,7 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
     overlay = (
         '<div class="sv-detalhe" id="svDet" role="dialog" aria-modal="true">'
         '<div class="sv-hero"><button class="sv-volta" id="svVolta" aria-label="Voltar">&larr;</button>'
-        '<img id="svImg" src="" alt=""></div>'
+        '<img id="svImg" alt=""></div>'
         '<div class="sv-dbody"><h2 id="svNome"></h2><div class="sv-dprice" id="svPreco"></div><p id="svDesc"></p>'
         '<div class="sv-ctas"><a class="sv-cta" id="svWa" href="#" target="_blank" rel="noopener">' + cta_label + "</a></div>"
         "</div></div>"

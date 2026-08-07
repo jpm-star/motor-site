@@ -96,3 +96,17 @@ def test_hero_trust_nao_divide_linha_com_o_cta():
                      subheadline="S", secoes=[], cta_texto="C", cta_contato="5514999999999"), "x").arquivos["index.html"]
     i = html.index(".hero-trust")
     assert "display:block" in html[i:i + 220], "hero-trust voltou a dividir linha com o CTA"
+
+
+def test_overlay_nao_nasce_com_src_vazio():
+    """REGRESSÃO: `<img src="">` não é "sem imagem" — o navegador resolve a string vazia
+    para a URL da PÁGINA e dispara um request extra que sempre falha. Estava em 39 dos 54
+    sites publicados; o gate visual (qa_visual) o encontrou."""
+    from app.providers.base import BriefingSite
+    from app.providers.template_real import GeradorTemplate
+
+    html = GeradorTemplate().gerar(
+        BriefingSite(nome_empresa="X", nicho="clínica odontológica", headline="H",
+                     subheadline="S", secoes=[], cta_texto="C",
+                     cta_contato="5514999999999"), "x").arquivos["index.html"]
+    assert 'src=""' not in html, "voltou um src vazio no HTML"
