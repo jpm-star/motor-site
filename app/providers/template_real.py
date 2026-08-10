@@ -13,6 +13,7 @@ import os
 from urllib.parse import quote
 
 from .. import design
+from .. import motion
 from ..seo import ga4 as seo_ga4
 from ..seo import schema as seo_schema
 from ..seo import sitemap as seo_sitemap
@@ -374,7 +375,7 @@ def _bloco_catalogo_motion(nicho: str, zap: str, produtos: list | None = None,
                      + icones.icone(_icone_servico(nome), size=40, stroke=1.5) + "</span>")
         cards.append(
             '<button class="sv-card reveal" data-i="' + str(i) + '" aria-label="Ver ' + _e(nome) + '">'
-            '<div class="sv-thumb' + ("" if foto else " sv-semfoto") + '">' + miolo + "</div>"
+            '<div class="sv-thumb mo-organico' + ("" if foto else " sv-semfoto") + '">' + miolo + "</div>"
             '<div class="sv-cbody"><h3>' + _e(nome) + "</h3>" + preco_card + "</div></button>"
         )
         dados.append({"nome": nome, "desc": desc, "img": foto, "fb": "", "wa": wa, "preco": preco})
@@ -454,6 +455,9 @@ class GeradorTemplate(GeradorSiteProvider):
 
     def gerar(self, brief: BriefingSite, slug: str) -> SiteGerado:
         t = design.escolher_tema(brief.nicho, brief.nome_empresa)
+        # Motion tokenizado pelo MESMO eixo do tema (o segmento). Sem isto todo site
+        # gerado se move igual — e "todo mundo igual" é o oposto de premium.
+        mo = motion.para(brief.nicho)
         acento = brief.cor_primaria or t.acento  # marca do cliente vence o acento; resto do tema fica
         zap = _so_digitos(brief.cta_contato)
         # CTA WhatsApp contextual: mensagem pré-preenchida citando o SERVIÇO-âncora
@@ -521,10 +525,10 @@ class GeradorTemplate(GeradorSiteProvider):
             _hv = ""
         if _hv:  # vídeo do cliente = <video> REAL embutido (sem Higgsfield/render)
             _poster = f' poster="{_hi}"' if _hi else ""
-            hero_media = (f'<video class="hero-media" autoplay muted loop playsinline '
+            hero_media = (f'<video class="hero-media mo-organico" autoplay muted loop playsinline '
                           f'preload="metadata"{_poster}><source src="{_hv}"></video>')
         elif _hi:  # foto do cliente = <img> de hero real
-            hero_media = f'<img class="hero-media" src="{_hi}" alt="" loading="eager">'
+            hero_media = f'<img class="hero-media mo-organico" src="{_hi}" alt="" loading="eager">'
         else:
             hero_media = ""
         sec_titulo = f"Por que a {_e(brief.nome_empresa)}"
@@ -716,6 +720,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   .grid > .reveal, .cat-grid > * {{ transition-delay:0ms; }} }}
 {design.css_motion()}
 {design.css_motion_scroll()}
+{motion.css(mo)}
 {_MOTION_CSS}
 </style>
 </head>
@@ -729,6 +734,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   {hero_media}
   <span class="hero-orb"></span><span class="hero-orb o2"></span>
   {'<div class="aurora"></div>' if t.hero_escuro else ''}
+  {motion.svg_traco(mo)}
   {f'<span class="kicker load load-1">{kicker}</span>' if kicker else ''}
   <h1 class="load load-2">{_e(brief.headline)}</h1>
   <p class="load load-3">{_e(brief.subheadline)}</p>
