@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 from .. import design
 from .. import motion
+from .. import multipagina
 from .. import stack_pesada
 from .. import viewer360
 from ..seo import ga4 as seo_ga4
@@ -30,8 +31,17 @@ def _so_digitos(contato: str) -> str:
     return "".join(c for c in str(contato) if c.isdigit())
 
 
+# Cobertura nacional não é cidade. "growth com IA em Brasil" no <title> lê como
+# erro de preenchimento — e não traz nada do ganho de SEO local, que existe porque
+# a busca real é "X em <cidade>", nunca "X em Brasil".
+_NAO_E_CIDADE = {"brasil", "todo o brasil", "todo brasil", "brasil inteiro",
+                 "nacional", "remoto", "online", "-"}
+
+
 def _titulo_pagina(nome: str, nicho: str, cidade: str = "") -> str:
     # SEO local: "{nicho} em {cidade} | {nome}" — a busca "X em <cidade>" é a que converte.
+    if str(cidade).strip().lower() in _NAO_E_CIDADE:
+        cidade = ""
     if nicho and cidade:
         return f"{nicho} em {cidade} | {nome}"
     # não repetir o nicho quando o nome já o contém ("São Francisco Engenharia — Engenharia")
@@ -112,12 +122,22 @@ def _bloco_faq(t_id: str) -> str:
 def _canonical(slug: str) -> str:
     """<link rel="canonical">. Sem ele, a mesma página indexa em variações (com/sem
     barra, http/https, www) e o Google divide o sinal entre elas. Vazio quando não há
-    domínio conhecido — canonical apontando pro lugar errado é pior que não ter."""
+    domínio conhecido — canonical apontando pro lugar errado é pior que não ter.
+
+    ONDE O SITE MORA MUDA A RESPOSTA, e por isso existe o `SITE_NA_RAIZ`:
+      - lote em p.jpos.com.br/<slug>/  → canonical precisa do slug  (default)
+      - domínio próprio, site na raiz  → canonical é só a base      (SITE_NA_RAIZ=1)
+    Sem esse controle o jpos.com.br apontou canonical pra /jpos/ — uma URL que dá
+    404 no próprio domínio. Canonical quebrado é pior que canonical ausente: o
+    Google segue a instrução, não encontra a página, e joga fora o sinal da home.
+    Default mantém o comportamento antigo, pra não mexer nos sites já gerados.
+    """
     import os as _os
     base = (_os.environ.get("SITE_URL") or _os.environ.get("SITE_BASE_URL") or "").rstrip("/")
     if not base:
         return ""
-    s = (slug or "").strip("/")
+    na_raiz = _os.environ.get("SITE_NA_RAIZ", "").strip() in ("1", "true", "sim")
+    s = "" if na_raiz else (slug or "").strip("/")
     return f'<link rel="canonical" href="{base}/{s}/">' if s else f'<link rel="canonical" href="{base}/">'
 
 def _cta_titulo(brief) -> str:
@@ -762,6 +782,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   {marca}
   <a href="{link}">{_e(brief.cta_texto)}</a>
 </nav>
+<!--#miolo-inicio-->
 <header class="hero" id="topo"{_campo}>
   {hero_media}
   <span class="hero-orb"></span><span class="hero-orb o2"></span>
@@ -782,6 +803,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   <h2>{_e(_cta_titulo(brief))}</h2>
   <a class="btn btn-glow" href="{link}">{_e(cta_final)}</a>
 </section>
+<!--#miolo-fim-->
 <footer>© {_e(brief.nome_empresa)}{f' · {_e(brief.nicho)}' if brief.nicho else ''}</footer>
 <a class="zap-fixo" href="{link}" aria-label="WhatsApp">
   <svg viewBox="0 0 32 32"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.6.8 5 2.3 7L4 29l7.2-2.2c1.9 1 4 1.6 6.2 1.6h.6c6.6 0 12-5.4 12-12S22.6 3 16 3zm5.9 17c-.3.8-1.6 1.5-2.3 1.6-.6.1-1.3.2-3.8-.8-3.2-1.3-5.2-4.5-5.4-4.7-.2-.2-1.3-1.7-1.3-3.2s.8-2.3 1.1-2.6c.3-.3.6-.4.8-.4h.6c.2 0 .5-.1.7.5l1 2.4c.1.2.1.4 0 .6l-.4.6-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.6 2.1 2.6 1.5 1.3 2.7 1.7 3.1 1.9.4.2.6.2.8-.1l1-1.2c.2-.3.5-.2.8-.1l2.2 1c.3.2.5.3.6.4.1.3.1.9-.2 1.6z"/></svg>
@@ -812,8 +834,21 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
         # Tier 2 técnico: robots.txt sempre; sitemap.xml só com SITE_URL (sem domínio
         # não dá pra emitir <loc> absoluto válido — não inventa URL falsa).
         base = os.environ.get("SITE_URL", "").rstrip("/")
-        arquivos = {"index.html": html_doc,
-                    "robots.txt": seo_sitemap.robots_txt(f"{base}/sitemap.xml" if base else "/sitemap.xml")}
+
+        # === Tier 2: páginas irmãs. Sem `brief.paginas`, `_pgs` é [] e tudo abaixo
+        # vira no-op — T1 sai byte a byte igual ao de antes.
+        _pgs = multipagina.paginas_de(brief)
+        # As irmãs saem do molde CRU. Montar a partir do doc já enfeitado com os
+        # links inseriria a nav duas vezes — 11 links em vez de 6, e o segundo
+        # bloco empurrando o primeiro pra fora da tela.
+        arquivos = {"robots.txt": seo_sitemap.robots_txt(f"{base}/sitemap.xml" if base else "/sitemap.xml")}
+        arquivos.update(multipagina.montar(
+            html_doc, _pgs, base=base, nome=brief.nome_empresa, link_zap=link,
+            cta=brief.cta_texto))
+        arquivos["index.html"] = multipagina.home_com_links(html_doc, _pgs)
         if base:
-            arquivos["sitemap.xml"] = seo_sitemap.sitemap_xml([f"{base}/"])
+            # o sitemap precisa listar TODAS: página fora do sitemap depende de ser
+            # descoberta por link, e a home nem sempre é rastreada até o fim
+            arquivos["sitemap.xml"] = seo_sitemap.sitemap_xml(
+                [f"{base}/"] + multipagina.urls(_pgs, base))
         return SiteGerado(arquivos=arquivos, slug=slug)

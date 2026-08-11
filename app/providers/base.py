@@ -51,6 +51,10 @@ class BriefingSite:
     receita_hero: str = ""
     depoimentos: list = field(default_factory=list)  # prova social REAL [{texto,quem}] — vazio = seção omitida
     cta_titulo: str = ""      # título do CTA final, escrito pelo LLM com o nicho
+    # Tier 2: páginas IRMÃS da home (multi-página). Cada item:
+    # {slug, titulo, descricao, h1, intro, blocos:[{titulo,texto}], lista:[], tipo}
+    # Vazio = site de uma página só, exatamente como T1 — o padrão não muda.
+    paginas: list = field(default_factory=list)
     acervo: list = field(default_factory=list)  # fotos REAIS do cliente (caminhos relativos)  # "video"|"foto"|"texto" — preferência; "texto" suprime a mídia do hero
 
 
