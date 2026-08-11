@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 from .. import design
 from .. import motion
+from .. import viewer360
 from ..seo import ga4 as seo_ga4
 from ..seo import schema as seo_schema
 from ..seo import sitemap as seo_sitemap
@@ -458,6 +459,13 @@ class GeradorTemplate(GeradorSiteProvider):
         # Motion tokenizado pelo MESMO eixo do tema (o segmento). Sem isto todo site
         # gerado se move igual — e "todo mundo igual" é o oposto de premium.
         mo = motion.para(brief.nicho)
+        # Hero 360: só para "loja" COM sequência real (>=24 frames). Site de
+        # serviço e loja sem foto giratória não emitem nem o CSS.
+        _prods = getattr(brief, "produtos", None) or []
+        _p360 = next((p for p in _prods if viewer360.tem_sequencia(p)), None)
+        _v360_html = viewer360.html_bloco(_p360, alt=f"{brief.nome_empresa} — produto em 360 graus") if _p360 else ""
+        _v360_css = viewer360.css() if _p360 else ""
+        _v360_js = f"<script>{viewer360.js()}</script>" if _p360 else ""
         acento = brief.cor_primaria or t.acento  # marca do cliente vence o acento; resto do tema fica
         zap = _so_digitos(brief.cta_contato)
         # CTA WhatsApp contextual: mensagem pré-preenchida citando o SERVIÇO-âncora
@@ -721,6 +729,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 {design.css_motion()}
 {design.css_motion_scroll()}
 {motion.css(mo)}
+{_v360_css}
 {_MOTION_CSS}
 </style>
 </head>
@@ -735,6 +744,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   <span class="hero-orb"></span><span class="hero-orb o2"></span>
   {'<div class="aurora"></div>' if t.hero_escuro else ''}
   {motion.svg_traco(mo)}
+  {_v360_html}
   {f'<span class="kicker load load-1">{kicker}</span>' if kicker else ''}
   <h1 class="load load-2">{_e(brief.headline)}</h1>
   <p class="load load-3">{_e(brief.subheadline)}</p>
@@ -771,6 +781,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   }});
 }})();
 </script>
+{_v360_js}
 </body>
 </html>
 """
