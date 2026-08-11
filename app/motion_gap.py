@@ -26,16 +26,26 @@ NATIVO = [
     "contador/números animados",
     "acordeão (FAQ) com transição de altura",
     "sticky nav + shrink no scroll",
+    # entraram com a stack pesada (2026-08-11) — app/stack_pesada.py:
+    "seção pinada com sequência encadeada no scroll (GSAP ScrollTrigger)",
+    "campo de fundo orgânico/fluido em tempo real (Three.js, shader)",
+    "morphing de formas por domain warping no shader",
 ]
 
 # Efeitos que CSS comum não entrega bem → viram asset Higgsfield (lista viva).
+#
+# ENCOLHEU EM 2026-08-11. GSAP e Three.js entraram no motor, e três itens que
+# custavam um vídeo Higgsfield por cliente viraram render em tempo real: morphing
+# orgânico, fluido/partículas e distorção/liquify. O que sobra aqui é o que shader
+# de fundo genuinamente não faz — cena com câmera, motion-blur cinematográfico e
+# personagem animado, que precisam de conteúdo autoral, não de técnica.
+#
+# Manter item resolvido nesta lista custa dinheiro de verdade: o motor pediria um
+# asset pago pra um efeito que ele já renderiza de graça.
 FORA_DO_CSS = [
-    "morphing orgânico de formas/blobs 3D",
-    "simulação de fluido/partículas/fumaça reativa",
     "câmera 3D atravessando cena (fly-through)",
     "transição cinematográfica com motion-blur real",
     "personagem/produto animado quadro-a-quadro",
-    "distorção/liquify de imagem em tempo real",
 ]
 
 
@@ -45,9 +55,14 @@ def classificar(efeito: str, replicavel: bool | None = None) -> dict:
     Devolve {nativo, acao} — 'css' (o template faz) ou 'asset' (gera prompt Higgsfield)."""
     if replicavel is None:
         e = (efeito or "").lower()
-        pesado = any(k in e for k in ("3d", "partícul", "particul", "fluido", "fumaça", "fumaca",
-                                      "morph", "blob", "liquify", "quadro-a-quadro", "fly", "motion-blur",
-                                      "motion blur", "câmera", "camera"))
+        # A lista encolheu junto com FORA_DO_CSS (2026-08-11). Saíram "3d",
+        # "partícul", "fluido", "fumaça", "morph", "blob" e "liquify": o shader do
+        # campo faz todos. O que sobrou tem em comum não ser questão de técnica e
+        # sim de CONTEÚDO AUTORAL — câmera precisa de cena, quadro-a-quadro precisa
+        # de personagem. Nenhum shader inventa isso.
+        pesado = any(k in e for k in ("quadro-a-quadro", "quadro a quadro", "personagem",
+                                      "fly", "motion-blur", "motion blur",
+                                      "câmera", "camera"))
         replicavel = not pesado
     return {"efeito": efeito, "nativo": bool(replicavel),
             "acao": "css" if replicavel else "asset"}
@@ -77,7 +92,12 @@ def prompt_higgsfield(efeito: str, *, marca: str = "JPOS", contexto: str = "") -
 
 if __name__ == "__main__":  # self-check: nativo vs asset + prompt bem-formado
     assert classificar("scroll-reveal com fade")["acao"] == "css"
-    assert classificar("morphing de blob 3D com fluido")["acao"] == "asset"
+    # ERA "asset" até 2026-08-11. Com Three.js no motor, isto é o shader do campo —
+    # pedir um vídeo pago pra um efeito que o site renderiza sozinho era o custo que
+    # a stack pesada veio eliminar.
+    assert classificar("morphing de blob 3D com fluido")["acao"] == "css"
+    assert classificar("câmera atravessando um túnel")["acao"] == "asset"
+    assert classificar("personagem animado quadro-a-quadro")["acao"] == "asset"
     r = prompt_higgsfield("câmera 3D atravessando um túnel de dados neon", contexto="hero")
     assert "Higgsfield" not in r["prompt_higgsfield"] and "#00e6a2" in r["prompt_higgsfield"]
     assert r["papel"].startswith("transição")

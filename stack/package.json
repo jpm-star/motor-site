@@ -1,0 +1,1 @@
+{"name":"jpos-stack-pesada","private":true,"type":"module","dependencies":{"gsap":"3.13.0","three":"0.180.0"},"devDependencies":{"esbuild":"^0.28.2"}}

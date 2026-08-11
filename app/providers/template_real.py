@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 from .. import design
 from .. import motion
+from .. import stack_pesada
 from .. import viewer360
 from ..seo import ga4 as seo_ga4
 from ..seo import schema as seo_schema
@@ -466,6 +467,13 @@ class GeradorTemplate(GeradorSiteProvider):
         _v360_html = viewer360.html_bloco(_p360, alt=f"{brief.nome_empresa} — produto em 360 graus") if _p360 else ""
         _v360_css = viewer360.css() if _p360 else ""
         _v360_js = f"<script>{viewer360.js()}</script>" if _p360 else ""
+
+        # campo WebGL só em hero ESCURO: o shader soma luz (blend aditivo na
+        # prática), então em fundo claro ele lava a cor e suja o texto. Tema claro
+        # fica exatamente como está hoje — e não baixa os 119 KB do Three.
+        _campo = ' data-campo="0.55"' if t.hero_escuro else ""
+        # `_portao` não pode ser calculado aqui: depende de `_cena`, que só existe
+        # depois das seções serem montadas. Fica logo abaixo delas.
         acento = brief.cor_primaria or t.acento  # marca do cliente vence o acento; resto do tema fica
         zap = _so_digitos(brief.cta_contato)
         # CTA WhatsApp contextual: mensagem pré-preenchida citando o SERVIÇO-âncora
@@ -516,12 +524,26 @@ class GeradorTemplate(GeradorSiteProvider):
             if len(secoes) >= 3:
                 break
             secoes.append(p)
+        # `processo` era um token DECLARADO E INERTE: 5 temas pedem essa assinatura e
+        # o template só sabia renderizar `index`. Ela vira agora a cena pinada do
+        # GSAP — as seções do briefing já SÃO uma sequência, e sequência é a única
+        # coisa que justifica pinar. Pinar um grid qualquer seria GSAP de enfeite.
+        _cena = t.assinatura == "processo" and len(secoes) >= 2
+        # `reveal` (CSS) e `data-passo` (GSAP) mexem AMBOS em opacity/visibility. Juntos
+        # brigam: o inline do GSAP ganha, mas o reveal reaplica ao reentrar na viewport
+        # e o passo pisca. Numa cena quem manda é o GSAP — o reveal sai.
+        _cls = "card passo" if _cena else "card reveal"
         cards = "\n".join(
-            f'<article class="card reveal">'
+            f'<article class="{_cls}"{" data-passo" if _cena else ""}>'
             f'{f"<span class=num>{i:02d}</span>" if numerado else ""}'
             f'<h3>{_e(s["titulo"])}</h3><p>{_e(s["corpo"])}</p></article>'
             for i, s in enumerate(secoes, 1)
         )
+        # o portão só existe se a página REALMENTE usa cena ou campo — sem isso a
+        # stack seria peso declarado e nunca exercido, o mesmo erro que deixou a
+        # assinatura `processo` inerte por meses
+        _portao = (stack_pesada.css_cena() if _cena else "") + \
+            stack_pesada.portao(cena=_cena, campo=bool(_campo))
         kicker = _e(brief.nicho).upper() if brief.nicho else ""
 
         # === PROMPT 2: assets/copy do CLIENTE (opcionais). Vazio = comportamento de hoje. ===
@@ -549,7 +571,8 @@ class GeradorTemplate(GeradorSiteProvider):
         # A ordem das seções era um literal aqui — por isso TODO site saía igual, mudando
         # só a pele. Agora vem de `brief.receita_ordem`. Regra de segurança: bloco que TEM
         # conteúdo e a receita não cita vai pro fim — receita errada nunca apaga seção paga.
-        sobre = (f'<main>\n  <h2 class="sec-titulo reveal">{sec_titulo}</h2>\n'
+        sobre = (f'<main{" data-cena" if _cena else ""}>\n'
+                 f'  <h2 class="sec-titulo reveal">{sec_titulo}</h2>\n'
                  f'  <div class="grid">\n{cards}\n  </div>\n</main>')
         blocos = {"sobre": sobre, "catalogo_motion": catalogo_motion, "catalogo": catalogo,
                   "antesdepois": antesdepois, "preco": preco, "calculadora": calculadora,
@@ -739,7 +762,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
   {marca}
   <a href="{link}">{_e(brief.cta_texto)}</a>
 </nav>
-<header class="hero" id="topo">
+<header class="hero" id="topo"{_campo}>
   {hero_media}
   <span class="hero-orb"></span><span class="hero-orb o2"></span>
   {'<div class="aurora"></div>' if t.hero_escuro else ''}
@@ -782,6 +805,7 @@ footer {{ text-align:center; padding:1.6rem; color: color-mix(in srgb,var(--ink)
 }})();
 </script>
 {_v360_js}
+{_portao}
 </body>
 </html>
 """

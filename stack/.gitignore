@@ -1,0 +1,4 @@
+# Sem barra final: assim a regra pega também um SYMLINK chamado node_modules.
+# Com "node_modules/" o git ignora só o diretório real e um link acaba commitado —
+# foi exatamente assim que um symlink auto-referente entrou no repo antes.
+node_modules
