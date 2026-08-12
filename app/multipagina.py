@@ -70,6 +70,17 @@ class Pagina:
         return len(txt.split())
 
 
+def _classe_da(p: Pagina) -> str:
+    """Classe de seção que corresponde ao que a página É — o mesmo vocabulário que a
+    home usa (`faq`, `servicos`), pra a camada de acabamento tratar as duas igual."""
+    alvo = f"{p.slug} {p.h1}".lower()
+    if any(t in alvo for t in ("faq", "pergunta", "duvida", "dúvida")):
+        return "faq"
+    if p.tipo == "Service":
+        return "servicos"
+    return "conteudo"
+
+
 def _miolo(p: Pagina, link_zap: str, cta: str, nome: str) -> str:
     """O corpo da página. Estrutura AEO: h1, resposta direta, depois detalhes.
 
@@ -84,11 +95,17 @@ def _miolo(p: Pagina, link_zap: str, cta: str, nome: str) -> str:
         "</header>",
         "<main>",
     ]
+    # A CLASSE DIZ O QUE A SEÇÃO É. Antes tudo saía como "reveal" genérico, e a página
+    # de perguntas frequentes não se identificava como FAQ — então o acento de morfismo
+    # que o motor decide pra `faq` não tinha onde casar, e a página que MAIS pedia
+    # textura de documento saía com o tratamento neutro. A classe não muda o layout:
+    # ela é o gancho pra camada de acabamento e pro CSS do tema.
+    sec = _classe_da(p)
     for sub, texto in p.blocos:
-        partes.append(f'<section class="reveal"><h2>{_e(sub)}</h2><p>{_e(texto)}</p></section>')
+        partes.append(f'<section class="{sec} reveal"><h2>{_e(sub)}</h2><p>{_e(texto)}</p></section>')
     if p.lista:
         itens = "".join(f"<li>{_e(i)}</li>" for i in p.lista)
-        partes.append(f'<section class="reveal"><ul class="lista-t2">{itens}</ul></section>')
+        partes.append(f'<section class="{sec} reveal"><ul class="lista-t2">{itens}</ul></section>')
     partes += [
         "</main>",
         '<section class="cta-final reveal" id="contato">',
