@@ -16,12 +16,20 @@ Sem ANTHROPIC_API_KEY: devolve [] e o site sai de uma página só. Degradar pra 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import sys
 import urllib.request
 
 _URL = "https://api.anthropic.com/v1/messages"
 _MODELO = os.environ.get("T2_MODELO", "claude-sonnet-4-5-20250929")
+# 3 = uma tentativa limpa + duas com o erro na mão. Acima disso o custo cresce e
+# o padrão observado é: se não corrigiu na segunda, o problema é o cartucho (fato
+# faltando), não o modelo.
+_TENTATIVAS = int(os.environ.get("T2_TENTATIVAS", "3"))
+
+log = logging.getLogger("motor.conteudo_t2")
 
 # Números e prazos são a mentira mais fácil de escrever e a mais cara de sustentar:
 # o prospect cobra na call, e quem responde é o JP, não o modelo.
@@ -138,31 +146,50 @@ def escrever(cart: dict, *, chave: str | None = None) -> tuple[list[dict], list[
         fatos=fatos, quantas=len(pedidas),
         lista="\n".join(f'{i+1}. h1 "{h1}" — {inst}' for i, (_, h1, inst) in enumerate(pedidas)))
 
-    req = urllib.request.Request(
-        _URL,
-        data=json.dumps({"model": _MODELO, "max_tokens": 8000,
-                         "messages": [{"role": "user", "content": prompt}]}).encode(),
-        headers={"x-api-key": chave, "anthropic-version": "2023-06-01",
-                 "content-type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=300) as r:
-            txt = json.loads(r.read().decode())["content"][0]["text"].strip()
-    except Exception as e:  # noqa: BLE001 — falha de rede não pode derrubar a geração
-        return [], [f"LLM indisponível ({type(e).__name__}) — T2 degrada pra página única"]
+    # RETRY COM O ERRO NA MÃO. A validação é tudo-ou-nada: uma página inventando
+    # "40 anos de tradição" reprova o lote inteiro e o site sai de PÁGINA ÚNICA —
+    # exatamente a promessa do T2 que o gap veio fechar. E o modo de falha é
+    # silencioso: 3 arquivos em vez de 8, sem nada quebrar na tela.
+    # Medido: reprovar por dado inventado é o caso comum, e o modelo corrige na
+    # segunda tentativa quando recebe QUAL regra quebrou.
+    paginas: list[dict] = []
+    erros: list[str] = []
+    for tentativa in range(1, _TENTATIVAS + 1):
+        corpo = prompt if tentativa == 1 else (
+            prompt + "\n\n=== SUA RESPOSTA ANTERIOR FOI REPROVADA ===\n"
+            + "\n".join(f"- {e}" for e in erros[:6])
+            + "\nReescreva TUDO corrigindo exatamente isso. Não invente número, prazo, "
+              "tempo de mercado nem quantidade de clientes em NENHUMA página.")
+        req = urllib.request.Request(
+            _URL,
+            data=json.dumps({"model": _MODELO, "max_tokens": 8000,
+                             "messages": [{"role": "user", "content": corpo}]}).encode(),
+            headers={"x-api-key": chave, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                txt = json.loads(r.read().decode())["content"][0]["text"].strip()
+        except Exception as e:  # noqa: BLE001 — falha de rede não pode derrubar a geração
+            return [], [f"LLM indisponível ({type(e).__name__}) — T2 degrada pra página única"]
 
-    if txt.startswith("```"):
-        txt = txt.split("```")[1].removeprefix("json").strip()
-    try:
-        paginas = json.loads(txt).get("paginas") or []
-    except ValueError as e:
-        return [], [f"resposta do LLM não é JSON ({e})"]
+        if txt.startswith("```"):
+            txt = txt.split("```")[1].removeprefix("json").strip()
+        try:
+            paginas = json.loads(txt).get("paginas") or []
+        except ValueError as e:
+            erros = [f"resposta do LLM não é JSON ({e})"]
+            continue
 
-    erros = validar(paginas)
-    if erros:
-        # tudo ou nada: meia dúzia de páginas boas com uma inventando número
-        # contamina o site inteiro, e a inventada é justamente a que o prospect lê
-        return [], erros
-    return paginas, []
+        erros = validar(paginas)
+        if not erros:
+            return paginas, []
+        log.warning("conteúdo T2 reprovado na tentativa %d/%d: %s",
+                    tentativa, _TENTATIVAS, "; ".join(erros[:3]))
+
+    # esgotou as tentativas: tudo ou nada. Meia dúzia de páginas boas com uma
+    # inventando número contamina o site inteiro — e a inventada é justamente a
+    # que o prospect lê. Melhor T2 virar página única que virar mentira.
+    return [], [f"reprovado em {_TENTATIVAS} tentativas"] + erros
 
 
 if __name__ == "__main__":

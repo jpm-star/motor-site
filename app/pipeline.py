@@ -34,6 +34,12 @@ def montar_site(briefing: dict[str, Any]) -> ResultadoMontagem:
 
     angulos = orquestrador.analisar(briefing)
     brief = orquestrador.sintetizar(briefing, angulos)
+    # ÚLTIMA TRAVA antes de virar HTML: o modelo inventa prazo/superlativo que o
+    # dono nunca declarou ("prontos em 1 hora" a partir de "conserto na hora").
+    # As páginas T2 já eram validadas; a home — que é o que o dono lê primeiro —
+    # não era. Ver app/copy_honesta.py.
+    from . import copy_honesta
+    brief, _ = copy_honesta.sanear(brief, briefing)
     slug = _slug(brief.nome_empresa)
     site = gerador.gerar(brief, slug)
     resultado = deploy.publicar(site)

@@ -58,6 +58,11 @@ def test_local_deploy_sem_base_url_segue_file_url(tmp_path):
 
 
 def test_montar_site_producao_ponta_a_ponta(tmp_path, monkeypatch):
+    # ORQUESTRADOR FIXO EM STUB: este teste é do ENCANAMENTO (briefing → template →
+    # deploy → URL), não da copy. Com o default agora sendo `llm` quando há chave, o
+    # texto passaria a vir da IA e "Avaliação gratuita" não sairia literal — o teste
+    # quebraria por motivo errado, e num dia com a API fora quebraria de novo.
+    monkeypatch.setenv("SITE_ORQUESTRADOR", "stub")
     monkeypatch.setenv("SITE_GERADOR", "template")
     monkeypatch.setenv("SITE_DEPLOY", "local")
     monkeypatch.setenv("SITE_OUT_DIR", str(tmp_path))
